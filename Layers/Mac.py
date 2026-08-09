@@ -17,7 +17,7 @@ class MacAddress:
 
     def __init__(self, mac: Union[str, bytes], d_or_s: int = 0):
         if isinstance(mac, str):
-            mac = mac.replace(':', '').replace('-', '')
+            mac = mac.replace(':', '').replace('-', '').replace('.', '')
             if len(mac) != 12:
                 LLogger.error(error_code=ErrorCode.INVALID_MAC,message=f"Invalid Mac Address : {':'.join(mac[i:i+2] for i in range(0, len(mac), 2))}")
             try:

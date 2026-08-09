@@ -3,28 +3,35 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 """
-Standalone LightPacket L2pcapSocket for Linux (libpcap) – used for layer 2 packets socket.
+Standalone LightPacket L2Socket for Linux,BSD,MacOS and Unix systems (libpcap) – used for layer 2 packets socket.
 """
 import ctypes
 from ctypes import (
     create_string_buffer, c_ubyte, c_int, c_char_p, c_uint,
     c_void_p, byref, POINTER, c_ulong, c_ushort, c_uint32, Structure
 )
+from ctypes.util import find_library
 import sys
 import time
+import select
 from typing import Optional
 from ..Interfaces.LibpcapInterfacesLin import get_default_interface_name_linux
+from ..Interfaces.UnixInterfaces import get_default_interface_bsd
 
-if sys.platform != "linux":
-    raise RuntimeError("This module is designed for Linux with libpcap.")
+defaultiface = None
 
-try:
-    pcap_lib = ctypes.CDLL("libpcap.so.1")
-except OSError:
+if sys.platform == "darwin":
+    pcap_path = find_library("pcap")
+    if pcap_path:
+        pcap_lib = ctypes.CDLL(pcap_path)
+else:
     try:
-        pcap_lib = ctypes.CDLL("libpcap.so")
+        pcap_lib = ctypes.CDLL("libpcap.so.1")
     except OSError:
-        raise RuntimeError("libpcap not found. Install with: sudo apt-get install libpcap-dev")
+        try:
+            pcap_lib = ctypes.CDLL("libpcap.so")
+        except OSError:
+            raise RuntimeError("libpcap not found. Install with: sudo apt-get install libpcap-dev")
 
 
 class pcap_pkthdr(ctypes.Structure):
@@ -97,6 +104,12 @@ pcap_lib.pcap_set_promisc.restype = c_int
 pcap_lib.pcap_set_timeout.argtypes = [c_void_p, c_int]
 pcap_lib.pcap_set_timeout.restype = c_int
 
+pcap_lib.pcap_set_immediate_mode.argtypes = [c_void_p, c_int]
+pcap_lib.pcap_set_immediate_mode.restype = c_int
+
+pcap_lib.pcap_get_selectable_fd.argtypes = [c_void_p]
+pcap_lib.pcap_get_selectable_fd.restype = c_int
+
 pcap_lib.pcap_set_rfmon.argtypes = [c_void_p, c_int]
 pcap_lib.pcap_set_rfmon.restype = c_int
 
@@ -140,11 +153,17 @@ pcap_lib.pcap_freealldevs.restype = None
 pcap_lib.pcap_lookupdev.argtypes = [c_char_p]
 pcap_lib.pcap_lookupdev.restype = c_char_p
 
+if defaultiface == None:
+    if sys.platform == "linux":
+        defaultiface = get_default_interface_name_linux()
+    else:
+        defaultiface = get_default_interface_bsd()['name']
+
 class L2Socket:
 
     def __init__(self, iface=None, snaplen=65535, promisc=True, to_ms=100, monitor=False):
         if iface is None:
-            iface = get_default_interface_name_linux()
+            iface = defaultiface
             if iface is None:
                 raise RuntimeError("No network interface found")
         
@@ -163,6 +182,8 @@ class L2Socket:
             raise OSError(self._err(errbuf) or "Could not set promisc")
         if pcap_lib.pcap_set_timeout(self.pcap, to_ms) != 0:
             raise OSError(self._err(errbuf) or "Could not set timeout")
+        if pcap_lib.pcap_set_immediate_mode(self.pcap, 1) != 0:
+            raise OSError(self._err(errbuf) or "Could not set immediate mode")
         if monitor:
             if pcap_lib.pcap_set_rfmon(self.pcap, 1) != 0:
                 raise OSError(self._err(errbuf) or "Could not set monitor mode")
@@ -214,13 +235,21 @@ class L2Socket:
         if self.closed or not self.pcap:
             raise RuntimeError("Socket closed")
 
+        fd = pcap_lib.pcap_get_selectable_fd(self.pcap)
+
         packets = []
-        start_time = time.time()
+        deadline = time.time() + timeout
         received = 0
 
         while True:
-            if timeout > 0 and (time.time() - start_time) > timeout:
+            remaining = deadline - time.time()
+            if timeout > 0 and remaining <= 0:
                 break
+
+            if fd >= 0 and timeout > 0:
+                ready, _, _ = select.select([fd], [], [], remaining)
+                if not ready:
+                    break
 
             header_ptr = POINTER(pcap_pkthdr)()
             data_ptr = POINTER(c_ubyte)()
@@ -238,12 +267,9 @@ class L2Socket:
 
                     if count > 0 and received >= count:
                         break
-
             elif ret == -1:
                 err = self.geterr()
                 raise RuntimeError(f"pcap_next_ex error: {err}")
-            elif ret == -2:
-                continue
 
         return packets
 
@@ -264,10 +290,21 @@ class L2Socket:
         if filter_str:
             self.set_filter(filter_str)
 
-        response = None
-        start_time = time.time()
+        fd = pcap_lib.pcap_get_selectable_fd(self.pcap)
 
-        while (time.time() - start_time) < timeout:
+        response = None
+        deadline = time.time() + timeout
+
+        while True:
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                break
+
+            if fd >= 0:
+                ready, _, _ = select.select([fd], [], [], remaining)
+                if not ready:
+                    break
+
             header_ptr = POINTER(pcap_pkthdr)()
             data_ptr = POINTER(c_ubyte)()
 
@@ -276,16 +313,14 @@ class L2Socket:
             if ret == 1:
                 if header_ptr and data_ptr:
                     length = header_ptr.contents.len
-                    data = bytearray(length)
+                    buf = bytearray(length)
                     for i in range(length):
-                        data[i] = data_ptr[i]
-                    response = bytes(data)
+                        buf[i] = data_ptr[i]
+                    response = bytes(buf)
                     break
             elif ret == -1:
                 err = self.geterr()
                 raise RuntimeError(f"pcap_next_ex error: {err}")
-            elif ret == -2:
-                continue
 
         if original_filter:
             self.set_filter(original_filter)
@@ -310,10 +345,21 @@ class L2Socket:
         if filter_str:
             self.set_filter(filter_str)
 
-        start_time = time.time()
+        fd = pcap_lib.pcap_get_selectable_fd(self.pcap)
+
+        deadline = time.time() + timeout
         received = 0
 
-        while (time.time() - start_time) < timeout and (count == 0 or received < count):
+        while count == 0 or received < count:
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                break
+
+            if fd >= 0:
+                ready, _, _ = select.select([fd], [], [], remaining)
+                if not ready:
+                    break
+
             header_ptr = POINTER(pcap_pkthdr)()
             data_ptr = POINTER(c_ubyte)()
 
@@ -322,16 +368,14 @@ class L2Socket:
             if ret == 1:
                 if header_ptr and data_ptr:
                     length = header_ptr.contents.len
-                    data = bytearray(length)
+                    buf = bytearray(length)
                     for i in range(length):
-                        data[i] = data_ptr[i]
-                    responses.append(bytes(data))
+                        buf[i] = data_ptr[i]
+                    responses.append(bytes(buf))
                     received += 1
             elif ret == -1:
                 err = self.geterr()
                 raise RuntimeError(f"pcap_next_ex error: {err}")
-            elif ret == -2:
-                continue
 
         if original_filter:
             self.set_filter(original_filter)

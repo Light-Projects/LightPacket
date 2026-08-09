@@ -13,6 +13,7 @@ from ctypes import (
 import os
 import sys
 import time
+import select
 from typing import Optional
 from ..Interfaces.WinInterfaces import get_default_interface_npcap_name_windows
 
@@ -65,6 +66,12 @@ pcap_set_timeout = pcap_lib.pcap_set_timeout
 pcap_set_timeout.restype = c_int
 pcap_set_timeout.argtypes = [c_void_p, c_int]
 
+pcap_lib.pcap_set_immediate_mode.argtypes = [c_void_p, c_int]
+pcap_lib.pcap_set_immediate_mode.restype = c_int
+
+pcap_lib.pcap_get_selectable_fd.argtypes = [c_void_p]
+pcap_lib.pcap_get_selectable_fd.restype = c_int
+
 pcap_set_rfmon = pcap_lib.pcap_set_rfmon
 pcap_set_rfmon.restype = c_int
 pcap_set_rfmon.argtypes = [c_void_p, c_int]
@@ -108,7 +115,7 @@ pcap_geterr.restype = c_char_p
 pcap_geterr.argtypes = [c_void_p]
 
 
-class L2pcapSocket:
+class L2Socket:
     """Raw layer-2 socket for Windows (Npcap)."""
 
     def __init__(self, iface=get_default_interface_npcap_name_windows(), snaplen=65535, promisc=True, to_ms=100, monitor=False):
@@ -127,6 +134,8 @@ class L2pcapSocket:
             raise OSError(self._err(errbuf) or "Could not set promisc")
         if pcap_set_timeout(self.pcap, to_ms) != 0:
             raise OSError(self._err(errbuf) or "Could not set timeout")
+        if pcap_lib.pcap_set_immediate_mode(self.pcap, 1) != 0:
+            raise OSError(self._err(errbuf) or "Could not set immediate mode")
         if monitor:
             if pcap_set_rfmon(self.pcap, 1) != 0:
                 raise OSError(self._err(errbuf) or "Could not set monitor mode")
@@ -176,22 +185,30 @@ class L2pcapSocket:
         return False
 
     def recvl2(self, count: int = 1, timeout: float = 1.0) -> list:
-
+        """Receive Layer 2 packets."""
         if self.closed or not self.pcap:
             raise RuntimeError("Socket closed")
 
+        fd = pcap_lib.pcap_get_selectable_fd(self.pcap)
+
         packets = []
-        start_time = time.time()
+        deadline = time.time() + timeout
         received = 0
 
         while True:
-            if timeout > 0 and (time.time() - start_time) > timeout:
+            remaining = deadline - time.time()
+            if timeout > 0 and remaining <= 0:
                 break
+
+            if fd >= 0 and timeout > 0:
+                ready, _, _ = select.select([fd], [], [], remaining)
+                if not ready:
+                    break
 
             header_ptr = POINTER(pcap_pkthdr)()
             data_ptr = POINTER(c_ubyte)()
 
-            ret = pcap_next_ex(self.pcap, byref(header_ptr), byref(data_ptr))
+            ret = pcap_lib.pcap_next_ex(self.pcap, byref(header_ptr), byref(data_ptr))
 
             if ret == 1:
                 if header_ptr and data_ptr:
@@ -204,16 +221,14 @@ class L2pcapSocket:
 
                     if count > 0 and received >= count:
                         break
-
             elif ret == -1:
                 err = self.geterr()
                 raise RuntimeError(f"pcap_next_ex error: {err}")
-            elif ret == -2:
-                continue
 
         return packets
 
     def srp1(self, packet, timeout: float = 3.0, filter_str: str = None) -> Optional[bytes]:
+        """Send and receive one Layer 2 packet."""
         if self.closed or not self.pcap:
             raise RuntimeError("Socket closed")
 
@@ -223,34 +238,43 @@ class L2pcapSocket:
             send_data = packet
 
         data = (c_ubyte * len(send_data)).from_buffer_copy(send_data)
-        sent = pcap_inject(self.pcap, data, len(send_data))
+        sent = pcap_lib.pcap_inject(self.pcap, data, len(send_data))
 
         original_filter = self._filter
         if filter_str:
             self.set_filter(filter_str)
 
-        response = None
-        start_time = time.time()
+        fd = pcap_lib.pcap_get_selectable_fd(self.pcap)
 
-        while (time.time() - start_time) < timeout:
+        response = None
+        deadline = time.time() + timeout
+
+        while True:
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                break
+
+            if fd >= 0:
+                ready, _, _ = select.select([fd], [], [], remaining)
+                if not ready:
+                    break
+
             header_ptr = POINTER(pcap_pkthdr)()
             data_ptr = POINTER(c_ubyte)()
 
-            ret = pcap_next_ex(self.pcap, byref(header_ptr), byref(data_ptr))
+            ret = pcap_lib.pcap_next_ex(self.pcap, byref(header_ptr), byref(data_ptr))
 
             if ret == 1:
                 if header_ptr and data_ptr:
                     length = header_ptr.contents.len
-                    data = bytearray(length)
+                    buf = bytearray(length)
                     for i in range(length):
-                        data[i] = data_ptr[i]
-                    response = bytes(data)
+                        buf[i] = data_ptr[i]
+                    response = bytes(buf)
                     break
             elif ret == -1:
                 err = self.geterr()
                 raise RuntimeError(f"pcap_next_ex error: {err}")
-            elif ret == -2:
-                continue
 
         if original_filter:
             self.set_filter(original_filter)
@@ -260,6 +284,7 @@ class L2pcapSocket:
         return response
 
     def srp(self, packet, timeout: float = 3.0, count: int = 1, filter_str: str = None) -> list:
+        """Send and receive multiple Layer 2 packets."""
         responses = []
 
         if hasattr(packet, 'build') and callable(packet.build):
@@ -268,34 +293,42 @@ class L2pcapSocket:
             send_data = packet
 
         data = (c_ubyte * len(send_data)).from_buffer_copy(send_data)
-        sent = pcap_inject(self.pcap, data, len(send_data))
+        sent = pcap_lib.pcap_inject(self.pcap, data, len(send_data))
 
         original_filter = self._filter
         if filter_str:
             self.set_filter(filter_str)
 
-        start_time = time.time()
+        fd = pcap_lib.pcap_get_selectable_fd(self.pcap)
+
+        deadline = time.time() + timeout
         received = 0
 
-        while (time.time() - start_time) < timeout and (count == 0 or received < count):
+        while count == 0 or received < count:
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                break
+            if fd >= 0:
+                ready, _, _ = select.select([fd], [], [], remaining)
+                if not ready:
+                    break
+
             header_ptr = POINTER(pcap_pkthdr)()
             data_ptr = POINTER(c_ubyte)()
 
-            ret = pcap_next_ex(self.pcap, byref(header_ptr), byref(data_ptr))
+            ret = pcap_lib.pcap_next_ex(self.pcap, byref(header_ptr), byref(data_ptr))
 
             if ret == 1:
                 if header_ptr and data_ptr:
                     length = header_ptr.contents.len
-                    data = bytearray(length)
+                    buf = bytearray(length)
                     for i in range(length):
-                        data[i] = data_ptr[i]
-                    responses.append(bytes(data))
+                        buf[i] = data_ptr[i]
+                    responses.append(bytes(buf))
                     received += 1
             elif ret == -1:
                 err = self.geterr()
                 raise RuntimeError(f"pcap_next_ex error: {err}")
-            elif ret == -2:
-                continue
 
         if original_filter:
             self.set_filter(original_filter)
