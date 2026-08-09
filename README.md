@@ -123,7 +123,7 @@ pkgadd -d http://get.opencsw.org/now    # Solaris
 winget install Nmap.Npcap
 ```
 
-### Install from Source
+### Install from Source (NOTE: for Mac and Windows you should change the lib ext in setup.py and for compiling as well)
 
 ```bash
 git clone https://github.com/adamboulaaz92-jpg/LightPacket.git
@@ -136,7 +136,7 @@ python setup.py install
 ### Install from pip image (NOTE: For Linux/Windows/Mac)
 
 ```bash
-pip install lightpacket==0.0.1rc0
+pip install lightpacket
 ```
 
 ### Dependencies
