@@ -13,8 +13,10 @@ if sys.platform == "linux":
     lib = ctypes.CDLL(f"{current_dir}/libpcap_writer.so")
 elif sys.platform == "win32":
     lib = ctypes.CDLL(f"{current_dir}/libpcap_writer.dll")
+elif sys.platform == "darwin":
+    lib = ctypes.CDLL(f"{current_dir}/libpcap_writer.dylib")
 else:
-    raise OSError("Unsupported platform")
+    lib = ctypes.CDLL(f"{current_dir}/libpcap_writer.so")
 
 class PcapPacketData(ctypes.Structure):
     _fields_ = [
