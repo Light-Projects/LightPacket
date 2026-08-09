@@ -12,8 +12,10 @@ if sys.platform == "linux":
     lib = ctypes.CDLL(f"{current_dir}/libpcap_reader.so")
 elif sys.platform == "win32":
     lib = ctypes.CDLL(f"{current_dir}/libpcap_reader.dll")
+elif sys.platform == "darwin":
+    lib = ctypes.CDLL(f"{current_dir}/libpcap_reader.dylib")
 else:
-    raise OSError("Unsupported platform")
+    lib = ctypes.CDLL(f"{current_dir}/libpcap_reader.so")
 
 class PcapGlobalHeader(ctypes.Structure):
     _pack_ = 1  
