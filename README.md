@@ -4,6 +4,8 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS%20%7C%20BSD-lightgrey.svg)](https://github.com/adamboulaaz92-jpg/LightPacket)
 
+![](images/LightPacket-Logo.png)
+
 ## Overview
 
 **LightPacket** is a cross-platform packet manipulation library designed for building, parsing, and sending network packets at Layer 2. It provides a clean Python interface for constructing custom packets, parsing captured data, and interacting with network interfaces using libpcap/Npcap.
