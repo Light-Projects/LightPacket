@@ -7,7 +7,11 @@ from setuptools import setup, find_packages
 setup(
     name="LightPacket",
     version="0.0.1",
-    packages=find_packages(),
+    packages=find_packages(),  
+    package_data={
+        'LightPacket': ['lib/libpcap_writer.so','lib/libpcap_reader.so'],
+    },
+    include_package_data=True,
     install_requires=[],
     author="Adam Boulaaz",
     keywords="packet manipulation, networking, security, scanning, framework",
@@ -16,6 +20,8 @@ setup(
     classifiers=[
         "License :: OSI Approved :: Mozilla Public License 2.0 (MPL-2.0)",
     ],
+    long_description="README.md",
+    long_description_content_type="text/markdown",
     url="https://github.com/adamboulaaz92-jpg/LightPacket",
     project_urls={
             "Bug Tracker": "https://github.com/adamboulaaz92-jpg/LightPacket/issues",
@@ -23,4 +29,5 @@ setup(
         },
     author_email="adamboulaaz92@gmail.com",
     description="Light-Scan Framework Custom Packet Manipulation Library",
+    zip_safe=False,
 )

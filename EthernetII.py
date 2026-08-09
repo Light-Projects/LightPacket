@@ -5,7 +5,7 @@
 from .Arp import ArpParser
 from .Layers.Mac import MacAddress
 from .Logger.LightLogger import Logger, ErrorCode, WarningCode
-from .BaseLayer import BaseLayer, Packet
+from .BaseLayer import BaseLayer
 from typing import Union
 from .Detect_layer import DetectLayer
 import struct
@@ -28,26 +28,50 @@ class EthernetLayer(BaseLayer):
         self.ethertype = ethertype
 
     def build(self) -> bytes:
-        self.check_layers()
-        if self.ethertype < 0x0600:
-            LLogger.error(error_code=ErrorCode.INVALID_DATA_LENGTH,message="Ether Type Field should not be less then 0x0600")
-        payload_bytes = self.get_payload_bytes()
-        return (
-                bytes(self.dst) +
-                bytes(self.src) +
-                struct.pack('>H', self.ethertype) +
-                payload_bytes
-        )
-
-    def check_layers(self):
+        self.numofvlan = 0
         layer = self.payload.__class__.__name__
         if self.ethertype is None:
             if layer == 'ArpLayer':
-                self.ethertype = ARP
+                self.ethertype =  ARP
+            elif layer == 'VLANLayer':
+                self.numofvlan, layer = self.vlanhandler()
+                self.ethertype = self.check_layers_fromvar(layer)
             else:
-                self.ethertype = IPv4
+                self.ethertype =  IPv4
         else:
             pass
+        if self.ethertype < 0x0600:
+            LLogger.error(error_code=ErrorCode.INVALID_DATA_LENGTH,message="Ether Type Field should not be less then 0x0600")
+        payload_bytes = self.get_payload_bytes()
+        chunked = b''
+        try:
+            if self.numofvlan > 0:
+                vlan_bytes = b''
+                for i in range(self.numofvlan):
+                    chunk = payload_bytes[i * 4:(i + 1) * 4]
+                    vlan_bytes += chunk
+
+                payload_bytes = payload_bytes[self.numofvlan * 4:]
+                chunked = vlan_bytes
+        except AttributeError:
+            pass
+
+        return (
+                    bytes(self.dst) +
+                    bytes(self.src) +
+                    bytes(chunked) +
+                    struct.pack('>H', self.ethertype) +
+                    payload_bytes
+            )
+
+    def check_layers_fromvar(self,var):
+        if var == 'ArpLayer':
+            return ARP
+        else:
+            return IPv4
+
+    def vlanhandler(self):
+        return self.payload.num()
 
     def __len__(self):
         return 14
@@ -101,9 +125,57 @@ class EthernetParser:
         payload = raw_packet[0][14:]
         Total = len(payload) + Length
 
-        if ether_type <= 0x05DC:
+        if ether_type <= 1500:
             from .Dot3 import Dot3Parser
             Dot3Parser.load_as_dot3_layer(raw_packet,verbose=verbose)
+
+        elif ether_type == 33024 or ether_type == 34984:
+            from .Vlan import vlannum, VLANParser
+            vl = None
+            prelayer = None
+            number = vlannum(raw_packet[0][12:])
+            ethertype = raw_packet[0][12 + (4 * number):14 + (4 * number)]
+            ethertype = struct.unpack('>H', ethertype)[0]
+            payload = raw_packet[0][14+(number * 4):]
+
+            if ethertype <= 0x05DC:
+                from .Dot3 import Dot3Parser
+                Dot3Parser.load_as_dot3_layer(raw_packet, verbose=verbose)
+            else:
+                if verbose:
+                    print(
+                        f"\n{BOLD}ETHERNET LAYER : {RESET}Len({PURPLE}{Length}{RESET}) Total Len({PURPLE}{Total}{RESET}) >")
+                    print(f'   {BLUE}MAC DST:{CYAN} {mac_dst_str}')
+                    print(f'   {BLUE}MAC SRC:{CYAN} {mac_src_str}')
+                    print(f'   {BLUE}ETHER TYPE:{CYAN} {hex(ethertype)} '
+                          f'{ETHERTYPE.get(ethertype, "Unknown")}{RESET}')
+
+
+                vl = VLANParser.load_as_vlan_layer(raw_packet[0][12:14 + (number * 4)],verbose=verbose)
+
+                if len(payload) > 0 and Alr == 0 and payload != b'':
+                    if ethertype == ARP:
+                        prelayer = ArpParser.load_as_arp_layer(payload, Alr=1, verbose=verbose)
+                    else:
+                        d = DetectLayer()
+                        prelayer = d.start(payload, Alr=0, previous_layer="Ethernet", verbose=verbose)
+
+
+                ether = EthernetLayer(
+                    dst=mac_dst_str,
+                    src=mac_src_str,
+                    ethertype=ethertype,
+                )
+
+                if vl != None:
+                    if prelayer != None:
+                        return ether / vl / prelayer
+                    return ether / vl
+                elif prelayer != None:
+                    return ether / prelayer
+                else:
+                    return ether
+
         else:
             if ether_type >= 0x0600:
                 if verbose:
@@ -115,22 +187,23 @@ class EthernetParser:
 
                 if len(payload) > 0 and Alr == 0:
                     if ether_type == ARP:
-                        ArpParser.load_as_arp_layer(payload, Alr=1,verbose=verbose)
+                        prelayer = ArpParser.load_as_arp_layer(payload, Alr=1,verbose=verbose)
                     else:
                         d = DetectLayer()
-                        d.start(payload, Alr=0, previous_layer="Ethernet",verbose=verbose)
+                        prelayer = d.start(payload, Alr=0, previous_layer="Ethernet",verbose=verbose)
             else:
                 from .Raw import RawParser
-                RawParser.load_as_Raw_layer(raw_packet)
-
-        Packet['Ethernet'] = {
-            'dst': mac_dst,
-            'src': mac_src,
-            'ethertype': ether_type,
-        }
+                prelayer = RawParser.load_as_Raw_layer(raw_packet,verbose=verbose)
 
 
-        return Packet
+            ether = EthernetLayer(
+                dst=mac_dst_str,
+                src=mac_src_str,
+                ethertype=ether_type,
+            )
+
+
+            return ether / prelayer
 
 def EthertypeHex(ether_type):
     return hex(ether_type)

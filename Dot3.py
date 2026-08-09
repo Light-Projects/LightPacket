@@ -7,7 +7,7 @@ from .Decoration.Colors import BOLD, RESET, PURPLE, BLUE, CYAN
 from .Layers.Mac import MacAddress
 from .Layers.IS_LLC import is_llc
 from .Logger.LightLogger import Logger, ErrorCode
-from .BaseLayer import BaseLayer, Packet
+from .BaseLayer import BaseLayer
 from typing import Union
 
 LLogger = Logger()
@@ -34,13 +34,37 @@ class Dot3Layer(BaseLayer):
 
         elif self.length > 0x05DC:
             LLogger.error(error_code=ErrorCode.INVALID_DATA_LENGTH,message="Lenght Field in 802.3 should not be more then 0x05DC")
+        self.check_layers()
+        chunked = b''
+        try:
+            if self.numofvlan > 0:
+                vlan_bytes = b''
+                for i in range(self.numofvlan):
+                    chunk = payload_bytes[i * 4:(i + 1) * 4]
+                    vlan_bytes += chunk
+
+                payload_bytes = payload_bytes[self.numofvlan * 4:]
+                chunked = vlan_bytes
+                self.length -= self.numofvlan * 4
+        except AttributeError:
+            pass
 
         return (
                 bytes(self.dst) +
                 bytes(self.src) +
+                bytes(chunked) +
                 struct.pack('>H', self.length) +
                 payload_bytes
         )
+
+    def check_layers(self):
+        layer = self.payload.__class__.__name__
+
+        if layer == 'VLANLayer':
+            self.numofvlan,layer = self.vlanhandler()
+
+    def vlanhandler(self):
+        return self.payload.num()
 
     def __len__(self):
         return 14 + len(self.get_payload_bytes())
@@ -91,12 +115,58 @@ class Dot3Parser:
         payload = raw_packet[0][14:]
         Total = len(payload) + Length
 
-        if length > 0x05DC:
+        if length == 0x8100 or length == 0x88a8:
+            from .Vlan import vlannum, VLANParser
+            prelayer = None
+            number = vlannum(raw_packet[0][12:])
+            ethertype = raw_packet[0][12 + (4 * number):14 + (4 * number)]
+            ethertype = struct.unpack('>H', ethertype)[0]
+            payload = raw_packet[0][14 + (number * 4):]
+            if ethertype > 0x05DC:
+                from .EthernetII import EthernetParser
+                EthernetParser.load_as_ethernet_layer(raw_packet, verbose=verbose)
+            else:
+                if verbose:
+                    print(
+                        f"\n{BOLD}DOT3 (802.3) LAYER : {RESET}Len({PURPLE}{Length}{RESET}) Total Len({PURPLE}{Total}{RESET}) >")
+                    print(f'   {BLUE}MAC DST:{CYAN} {mac_dst_str}')
+                    print(f'   {BLUE}MAC SRC:{CYAN} {mac_src_str}')
+                    print(f'   {BLUE}LENGHT:{CYAN} {hex(ethertype)}{RESET}')
+
+
+                vl = VLANParser.load_as_vlan_layer(raw_packet[0][12:14 + (number * 4)],verbose=verbose)
+
+                if len(payload) > 0 and payload != b'':
+                    if is_llc(payload):
+                        from .LLC import LLCParser
+                        prelayer = LLCParser.load_as_llc_layer(payload, Alr=1, verbose=verbose)
+                    else:
+
+                        from .Detect_layer import DetectLayer
+                        d = DetectLayer()
+                        prelayer = d.start(packet=payload, previous_layer="Dot3", verbose=verbose)
+
+                dot3 = Dot3Layer(
+                    dst=mac_dst_str,
+                    src=mac_src_str,
+                    length=ethertype,
+                )
+
+                if vl != None:
+                    if prelayer != None:
+                        return dot3 / vl / prelayer
+                    return dot3 / vl
+                elif prelayer != None:
+                    return dot3 / prelayer
+                else:
+                    return dot3
+
+        elif length > 0x05DC:
             from .EthernetII import EthernetParser
             EthernetParser.load_as_ethernet_layer(raw_packet,verbose=verbose)
         else:
             if verbose:
-                print(f"\n{BOLD}DOT3 (802.3) : {RESET}Len({PURPLE}{Length}{RESET}) Total Len({PURPLE}{Total}{RESET}) >")
+                print(f"\n{BOLD}DOT3 (802.3) LAYER : {RESET}Len({PURPLE}{Length}{RESET}) Total Len({PURPLE}{Total}{RESET}) >")
                 print(f'   {BLUE}MAC DST:{CYAN} {mac_dst_str}')
                 print(f'   {BLUE}MAC SRC:{CYAN} {mac_src_str}')
                 print(f'   {BLUE}LENGHT:{CYAN} {hex(length)}{RESET}')
@@ -104,17 +174,18 @@ class Dot3Parser:
             if len(payload) > 0:
                 if is_llc(payload):
                     from .LLC import LLCParser
-                    LLCParser.load_as_llc_layer(payload,Alr=1,verbose=verbose)
+                    prelayer = LLCParser.load_as_llc_layer(payload,Alr=1,verbose=verbose)
                 else:
                     from .Detect_layer import DetectLayer
                     d = DetectLayer()
-                    d.start(packet=payload, previous_layer="Dot3",verbose=verbose)
+                    prelayer = d.start(packet=payload, previous_layer="Dot3",verbose=verbose)
 
-        Packet['Dot3'] = {
-            'dst': mac_dst,
-            'src': mac_src,
-            'length': Length,
-        }
+            dot3 = Dot3Layer(
+                dst=mac_dst_str,
+                src=mac_src_str,
+                length=length,
+            )
 
-        return Packet
+
+            return dot3 / prelayer
 

@@ -231,7 +231,7 @@ SAP_VALUES = {
     0x3C: "SNA (Systems Network Architecture)",
     0x3E: "SNA (Systems Network Architecture)",
     0x40: "SNA (Systems Network Architecture)",
-    0x42: "SNA (Systems Network Architecture)",
+    0x42: "STP (Spanning Tree Protocol)",
     0x44: "SNA (Systems Network Architecture)",
     0x46: "SNA (Systems Network Architecture)",
     0x48: "SNA (Systems Network Architecture)",
@@ -333,6 +333,8 @@ NULL_MAC = '00:00:00:00:00:00'
 BROADCAST_MAC_RAW = 'ffffffffffff'
 NULL_MAC_RAW = '000000000000'
 
+Layers_names = ["Ethernet" , "Arp", "Dot3", "SNAP", "LLC", "STP"]
+
 SAP_NULL = 0x00
 SAP_IP = 0x06
 SAP_SNA = 0x08
@@ -356,7 +358,6 @@ IPv4 = 0x0800
 ARP = 0x0806
 RARP = 0x8035
 IPv6 = 0x86DD
-VLAN = 0x8100
 MPLS = 0x8847
 MPLS_UPLABEL = 0x8848
 PPPoE_DISCOVERY = 0x8863

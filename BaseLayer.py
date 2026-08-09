@@ -5,7 +5,6 @@
 from typing import Optional, Union, Any
 import copy
 
-Packet = {}
 
 class BaseLayer:
 
@@ -53,6 +52,20 @@ class BaseLayer:
             return self._raw_payload
         else:
             return b''
+
+    def __getitem__(self, layer_type):
+        if isinstance(self, layer_type):
+            return self
+        if self.payload is not None:
+            return self.payload.__getitem__(layer_type)
+        raise KeyError(f"Layer {layer_type.__name__} not found")
+
+    def __contains__(self, layer_type):
+        if isinstance(self, layer_type):
+            return True
+        if self.payload is not None:
+            return layer_type in self.payload
+        return False
 
     def build(self) -> bytes:
         raise NotImplementedError("Subclasses must implement build()")

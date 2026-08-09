@@ -5,7 +5,7 @@
 import struct
 from .Decoration.Colors import RESET, CYAN, BLUE, PURPLE, BOLD
 from .Logger.LightLogger import Logger, ErrorCode
-from .BaseLayer import BaseLayer, Packet
+from .BaseLayer import BaseLayer
 from typing import Union
 from .Layers.Mac import MacAddress
 from .Layers.IPtoa import inet_aton, inet_ntoa
@@ -145,7 +145,7 @@ class ArpParser:
             opcode_e = "(Unknown)"
 
         if verbose:
-            print(f"\n{BOLD}ARP : {RESET}Len({PURPLE}{Lenght}{RESET}) Total Len({PURPLE}{Total}{RESET}) >")
+            print(f"\n{BOLD}ARP LAYER : {RESET}Len({PURPLE}{Lenght}{RESET}) Total Len({PURPLE}{Total}{RESET}) >")
             print(f'   {BLUE}HWTYPE:{CYAN} {hwtype} {HWTYPES.get(hwtype,'Unknown')}')
             print(f'   {BLUE}PTYPE:{CYAN} {hex(ptype)} {ETHERTYPE.get(ptype,'Unknown')}')
             print(f'   {BLUE}MACLEN:{CYAN} {maclen}')
@@ -160,18 +160,19 @@ class ArpParser:
             from .Raw import RawParser
             RawParser.load_as_Raw_layer(payload,verbose=verbose)
 
-        Packet['ARP'] = {
-            'hwtype': hwtype,
-            'ptype': ptype,
-            'maclen': maclen,
-            'plen': plen,
-            'opcode': opcode,
-            'src_mac': sender_mac,
-            'src_ip': sender_ip,
-            'dst_mac': target_mac,
-            'dst_ip': target_ip
-        }
+        arp = ArpLayer(
+            hwtype=hwtype,
+            ptype=ptype,
+            maclen=maclen,
+            plen=plen,
+            opcode=opcode,
+            macsrc=sender_mac_str,
+            macdst=target_mac_str,
+            ipsrc=sender_ip_str,
+            ipdst=target_ip_str
+        )
 
-        return Packet
+
+        return arp
 
 

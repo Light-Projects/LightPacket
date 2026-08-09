@@ -4,23 +4,19 @@
 
 import struct
 from .Layers.IS_LLC import is_llc
-from .BaseLayer import Packet
-
+from.Consts import Layers_names
 
 class DetectLayer:
-    def start(self, packet, Alr=0, previous_layer=None, verbose=False):
+    def start(self, packet, Alr=0, previous_layer=None, verbose=False, pclass=None):
         if hasattr(packet, 'build') and callable(packet.build) and Alr == 0:
             packet = packet.build()
 
         Lenght = len(packet)
 
-        if previous_layer is None:
-            Packet['_raw'] = packet
-
-        if previous_layer in ["Ethernet", "Dot3", "SNAP", "LLC"]:
+        if previous_layer in Layers_names:
             from .Raw import RawParser
-            RawParser.load_as_Raw_layer(packet,verbose=verbose)
-            return Packet
+            s = RawParser.load_as_Raw_layer(packet,verbose=verbose)
+            return s
 
         try:
             if Lenght >= 14:
@@ -29,23 +25,23 @@ class DetectLayer:
 
                 if eth_type >= 0x0600:
                     from .EthernetII import EthernetParser
-                    EthernetParser.load_as_ethernet_layer(packet,verbose=verbose)
+                    s = EthernetParser.load_as_ethernet_layer(packet,verbose=verbose)
                 elif eth_type <= 0x05DC:
                     from .Dot3 import Dot3Parser
-                    Dot3Parser.load_as_dot3_layer(packet,verbose=verbose)
+                    s = Dot3Parser.load_as_dot3_layer(packet,verbose=verbose)
                 else:
                     from .Raw import RawParser
-                    RawParser.load_as_Raw_layer(packet,verbose=verbose)
+                    s = RawParser.load_as_Raw_layer(packet,verbose=verbose)
 
             elif is_llc(packet):
                 from .LLC import LLCParser
-                LLCParser.load_as_llc_layer(packet,verbose=verbose)
+                s = LLCParser.load_as_llc_layer(packet,verbose=verbose)
             else:
                 from .Raw import RawParser
-                RawParser.load_as_Raw_layer(packet,verbose=verbose)
+                s = RawParser.load_as_Raw_layer(packet,verbose=verbose)
 
         except Exception:
             from .Raw import RawParser
-            RawParser.load_as_Raw_layer(packet,verbose=verbose)
+            s = RawParser.load_as_Raw_layer(packet,verbose=verbose)
 
-        return Packet
+        return s

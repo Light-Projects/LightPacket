@@ -2,13 +2,20 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+from Stp import *
+from Hex import *
 from EthernetII import *
 from Arp import *
 from Dot3 import *
+from Vlan import *
 from LLC import *
 from Snap import *
 from Raw import *
+from .utils.CIDR import *
+from Saving.pcapwriter import *
+from Saving.pcapreader import *
 from Layers.IS_LLC import *
+from Layers.get_layers import *
 from Interfaces.WinInterfaces import *
 from Interfaces.NpcapInterfacesWin import *
 from BaseLayer import *
@@ -61,12 +68,38 @@ def Dot3(dst: Union[str, bytes] = BROADCAST_MAC,
         src = get_default_interface_mac_windows()
     return Dot3Layer(dst=dst, src=src, length=length)
 
-def LLC(dsap: Union[str, bytes] = SAP_LLC_SNAP,ssap: Union[str, bytes] = SAP_LLC_SNAP,
+def VLAN(tpid=0x8100, priority=0, dei=0, vlan_id=1):
+    return VLANLayer(tpid=tpid, priority=priority, dei=dei, vlan_id=vlan_id)
+
+def LLC(dsap: Union[str, bytes] = None,ssap: Union[str, bytes] = None,
         control: Union[str, bytes] = LLC_UI):
     return LLCLayer(dsap=dsap, ssap=ssap, control=control)
 
 def SNAP(oui: Union[str, bytes] = 0x000000,pid: Union[str, bytes] = ARP):
     return SNAPLayer(oui=oui, pid=pid)
+
+def STP(protocol_version=0x00, bpdu_type=0x00, flags=0x00,
+                 root_priority=0x8000, root_mac: Union[str,bytes] =b'\x00\x11\x22\x33\x44\x55',
+                 root_path_cost=0, bridge_priority=0x8000,
+                 bridge_mac : Union[str,bytes] =b'\x00\x11\x22\x33\x44\x55', port_id=0x8001,
+                 message_age=0, max_age=5120, hello_time=512,
+                 forward_delay=3840):
+
+    return STPLayer(
+            protocol_version=protocol_version,
+            bpdu_type=bpdu_type,
+            flags=flags,
+            root_priority=root_priority,
+            root_mac=root_mac,
+            root_path_cost=root_path_cost,
+            bridge_priority=bridge_priority,
+            bridge_mac=bridge_mac,
+            port_id=port_id,
+            message_age=message_age,
+            max_age=max_age,
+            hello_time=hello_time,
+            forward_delay=forward_delay
+        )
 
 def Raw(payload: bytes = b'Test LightPacket Raw Layer') -> RawLayer:
     return RawLayer(payload=payload)

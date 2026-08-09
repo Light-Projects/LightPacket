@@ -4,7 +4,7 @@
 
 from .Decoration.Colors import BOLD, RESET, CYAN, BLUE, PURPLE
 from .Logger.LightLogger import Logger
-from .BaseLayer import Packet, BaseLayer
+from .BaseLayer import BaseLayer
 from typing import Optional
 
 
@@ -80,9 +80,9 @@ class RawParser:
             print(f"\n{BOLD}RAW LAYER : Len({PURPLE}{lenght}{RESET}) >")
             print(f'   {BLUE}PAYLOAD:{CYAN} {Raw} {RESET}')
 
-        Packet['Raw'] = {
-            'payload': Raw,
-        }
+        raw = RawLayer(
+            payload=Raw,
+        )
 
-        return Packet
+        return raw
 

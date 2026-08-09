@@ -16,9 +16,9 @@ from .Saving.pcapwriter import *
 from .Saving.pcapreader import *
 from .Layers.IS_LLC import *
 from .Layers.get_layers import *
-from .Interfaces.LinuxInterfaces import *
+from .Interfaces.UnixInterfaces import *
 from .Layers.L2SocketL import *
-from .Interfaces.LibpcapInterfacesLin import *
+from .Interfaces.LibpcapInterfacesUnix import *
 from .BaseLayer import *
 from .Layers.Mac import *
 from .Layers.IPtoa import *
@@ -33,10 +33,8 @@ def Ethernet(src: Union[str, bytes] = None, dst: Union[str, bytes] = BROADCAST_M
           ethertype: Union[str, bytes] = None) -> EthernetLayer:
 
     if src is None:
-        src = get_default_interface_mac_linux()
-
+        src = get_default_interface_bsd()['mac']
     return EthernetLayer(dst=dst, src=src, ethertype=ethertype)
-
 
 
 
@@ -45,7 +43,7 @@ def Arp(hwtype: int = None, ptype: int = None, maclen: int = None,
         ipsrc: str = None, macdst: Union[str, bytes] = None, ipdst: str = None) -> ArpLayer:
 
     if macsrc is None:
-        macsrc = get_default_interface_mac_linux()
+        macsrc = get_default_interface_bsd()['name']
     if macdst is None:
         macdst = BROADCAST_MAC
     if hwtype is None:
@@ -59,9 +57,9 @@ def Arp(hwtype: int = None, ptype: int = None, maclen: int = None,
     if opcode is None:
         opcode = 1
     if ipsrc is None:
-        ipsrc = get_default_interface_ip_linux()
+        ipsrc = get_default_interface_bsd()['ips_v4'][0]
     if ipdst is None:
-        ipdst = get_default_gateway_ipv4_linux()
+        ipdst = get_default_gateway_bsd()
 
     return ArpLayer(hwtype=hwtype, ptype=ptype, maclen=maclen,plen=plen, opcode=opcode,
                     macsrc=macsrc, ipsrc=ipsrc, ipdst=ipdst, macdst=macdst)
@@ -69,7 +67,7 @@ def Arp(hwtype: int = None, ptype: int = None, maclen: int = None,
 def Dot3(dst: Union[str, bytes] = BROADCAST_MAC,
          src: Union[str, bytes] = None, length: int = 0) -> Dot3Layer:
     if src is None:
-        src = get_default_interface_mac_linux()
+        src = get_default_interface_bsd()['mac']
     return Dot3Layer(dst=dst, src=src, length=length)
 
 def VLAN(tpid=0x8100, priority=0, dei=0, vlan_id=1):

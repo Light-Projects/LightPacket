@@ -13,7 +13,7 @@ if sys.platform == "win32":
 elif sys.platform == "linux":
     from .LightPacketLin import *
 else:
-    from .LightPacketLin import *
+    from .LightPacketUnix import *
 
 from .Version import __version__
 version = __version__

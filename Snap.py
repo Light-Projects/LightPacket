@@ -3,7 +3,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import struct
-from .BaseLayer import BaseLayer, Packet
+from .BaseLayer import BaseLayer
 from .Consts import ARP, ETHERTYPE
 from .Logger.LightLogger import Logger, ErrorCode
 from .Decoration.Colors import BOLD, RESET, CYAN, BLUE, PURPLE
@@ -20,7 +20,6 @@ class SNAPLayer(BaseLayer):
         super().__init__()
         self.oui = oui
         self.pid = pid
-
 
     def build(self) -> bytes:
         oui_bytes = self.oui.to_bytes(3, byteorder='big')
@@ -93,22 +92,23 @@ class SNAPParser:
         Total = len(payload) + Lenght
 
         if verbose:
-            print(f"\n{BOLD}SNAP : {RESET}Len({PURPLE}{Lenght}{RESET}) Total Len({PURPLE}{Total}{RESET}) >")
+            print(f"\n{BOLD}SNAP LAYER: {RESET}Len({PURPLE}{Lenght}{RESET}) Total Len({PURPLE}{Total}{RESET}) >")
             print(f'   {BLUE}OUI:{CYAN} {oui}')
             print(f'   {BLUE}PID:{CYAN} {hex(pid)} {ETHERTYPE.get(pid,'Unknown')}{RESET}')
 
         if len(payload) > 0:
             if pid == ARP:
                 from .Arp import ArpParser
-                ArpParser.load_as_arp_layer(payload,Alr=1,verbose=verbose)
+                prelayer = ArpParser.load_as_arp_layer(payload,Alr=1,verbose=verbose)
             else:
                 from .Detect_layer import DetectLayer
                 d = DetectLayer()
-                d.start(payload, previous_layer="SNAP",verbose=verbose)
+                prelayer = d.start(payload, previous_layer="SNAP",verbose=verbose)
 
-        Packet['SNAP'] = {
-            'oui': oui,
-            'pid': pid,
-        }
 
-        return Packet
+        snap = SNAPLayer(
+            oui=oui,
+            pid=pid
+        )
+
+        return snap / prelayer
