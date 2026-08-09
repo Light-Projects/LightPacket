@@ -18,7 +18,7 @@ except ImportError:
     netifaces = None
 
 
-class LinuxNetworkInterfaces:
+class NetworkInterfaces:
     
     COLORS = {
         'green': '\033[92m',
@@ -237,7 +237,7 @@ class LinuxNetworkInterfaces:
         return "\n".join(lines)
 
 
-class LinuxSimpleInterfaces:
+class SimpleInterfaces:
     
     def __init__(self):
         self._interfaces = {}
