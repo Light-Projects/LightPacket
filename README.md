@@ -70,7 +70,7 @@ LightPacket/
 │   └── Errors.py                 # Custom error classes
 ├── LightPacketWin.py             # Windows API wrapper
 └── LightPacketLin.py             # Linux API wrapper
-└── LightPacketUnix.py             # Unix Like Systems API wrapper
+└── LightPacketUnix.py            # Unix Like Systems API wrapper
 
 ```
 
@@ -92,20 +92,20 @@ sudo xbps-install -S libpcap-devel  # Void
 sudo tce-load -wi libpcap           # Tiny Core  
 ```
 
-*Mac*
+***Mac:***
 ```bash
 brew install libpcap
 # or port
 sudo port install libpcap
 ```
 
-*BSD*
+***BSD:***
 ```bash
 pkg install libpcap   # FreeBSD
 pkg_add libpcap       # OpenBSD/NetBSD
 ```
 
-*Unix*
+***Unix:***
 ```bash
 pkg install system/library/libpcap      # illumos (OpenIndiana)
 
