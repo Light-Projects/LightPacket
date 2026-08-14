@@ -300,6 +300,14 @@ def get_npcap_available_interfaces_windows() -> Dict:
 
     return active_adapters
 
+def get_interface_mac_windows(interface):
+    interfgaces = get_npcap_available_interfaces_windows()
+    for name, info in interfgaces.items():
+        if info['name'] == interface:
+            return info['mac']
+
+    return None
+
 def get_npcap_available_interfaces_pretify_windows() -> Dict:
     interfaces = get_npcap_available_interfaces_windows()
     for npcap_name, info in interfaces.items():

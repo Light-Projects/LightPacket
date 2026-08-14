@@ -15,7 +15,8 @@ from typing import Dict, List, Optional, Any
 from .UnixInterfaces import get_interface_mac_bsd
 
 IS_MACOS = sys.platform == 'darwin'
-IS_BSD = sys.platform.startswith('freebsd') or sys.platform.startswith('openbsd') or sys.platform.startswith('netbsd')
+IS_BSD = sys.platform.startswith('freebsd') or sys.platform.startswith('openbsd') or sys.platform.startswith('netbsd') or sys.platform.startswith('dragonfly')
+
 
 try:
     import netifaces
@@ -81,7 +82,7 @@ class NetworkInterfaces:
             for line in output.splitlines():
                 match_iface = re.search(r'^(\S+):\s+flags=', line)
                 if match_iface:
-                    if current_interface and not current_interface.startswith('lo'):
+                    if current_interface:
                         self._interfaces[current_interface] = {
                             'name': current_interface,
                             'ips_v4': ips_v4,

@@ -85,7 +85,7 @@ class NetworkInterfaces:
             
             for line in output.splitlines():
                 match = re.search(r'^(\d+): (\S+):', line)
-                if match and not match.group(2).startswith('lo'):
+                if match:
                     index = int(match.group(1))
                     interface = match.group(2)
                     
