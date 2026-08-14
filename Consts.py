@@ -333,7 +333,7 @@ NULL_MAC = '00:00:00:00:00:00'
 BROADCAST_MAC_RAW = 'ffffffffffff'
 NULL_MAC_RAW = '000000000000'
 
-Layers_names = ["Ethernet" , "Arp", "Dot3", "SNAP", "LLC", "STP"]
+Layers_names = ["Ethernet" , "Arp", "Dot3", "SNAP", "LLC", "STP", "PPP"]
 
 SAP_NULL = 0x00
 SAP_IP = 0x06
@@ -355,7 +355,7 @@ LLC_SABM = 0x2F
 LLC_FRMR = 0x87
 
 IPv4 = 0x0800
-ARP = 0x0806
+ARP_var = 0x0806
 RARP = 0x8035
 IPv6 = 0x86DD
 MPLS = 0x8847

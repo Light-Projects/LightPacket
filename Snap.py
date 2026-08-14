@@ -4,7 +4,7 @@
 
 import struct
 from .BaseLayer import BaseLayer
-from .Consts import ARP, ETHERTYPE
+from .Consts import ARP_var, ETHERTYPE
 from .Logger.LightLogger import Logger, ErrorCode
 from .Decoration.Colors import BOLD, RESET, CYAN, BLUE, PURPLE
 
@@ -16,12 +16,23 @@ SNAP Layer Creation (class SNAPLayer)
 
 class SNAPLayer(BaseLayer):
 
-    def __init__(self, oui=0x000000, pid=0x0806):
+    def __init__(self, oui=0x000000, pid=None):
         super().__init__()
         self.oui = oui
         self.pid = pid
 
     def build(self) -> bytes:
+        layer = self.payload.__class__.__name__
+        if self.pid is None:
+            if layer == 'PPPoELayer':
+                self.pid = 0x8863
+            elif layer == 'ArpLayer':
+                self.pid = ARP_var
+            elif layer == 'PPP2bLayer':
+                self.pid = 0x880B
+            else:
+                self.pid = ARP_var
+
         oui_bytes = self.oui.to_bytes(3, byteorder='big')
         result = struct.pack('!3sH', oui_bytes, self.pid)
 
@@ -35,7 +46,7 @@ class SNAPLayer(BaseLayer):
 
     def __repr__(self):
         return (
-            f"<SNAP oui={hex(self.oui)}, pid={hex(self.pid)}>")
+            f"<SNAP oui={self.oui}, pid={hex(self.pid)}>")
 
     def copy(self) -> 'SNAPLayer':
         new_layer = SNAPLayer(
@@ -50,7 +61,7 @@ class SNAPLayer(BaseLayer):
 
     def _show_fields(self) -> list:
         return [
-            f"oui={hex(self.oui)}",
+            f"oui={self.oui}",
             f"pid={hex(self.pid)}",
         ]
 
@@ -96,19 +107,25 @@ class SNAPParser:
             print(f'   {BLUE}OUI:{CYAN} {oui}')
             print(f'   {BLUE}PID:{CYAN} {hex(pid)} {ETHERTYPE.get(pid,'Unknown')}{RESET}')
 
-        if len(payload) > 0:
-            if pid == ARP:
-                from .Arp import ArpParser
-                prelayer = ArpParser.load_as_arp_layer(payload,Alr=1,verbose=verbose)
-            else:
-                from .Detect_layer import DetectLayer
-                d = DetectLayer()
-                prelayer = d.start(payload, previous_layer="SNAP",verbose=verbose)
-
-
         snap = SNAPLayer(
             oui=oui,
             pid=pid
         )
 
-        return snap / prelayer
+        if len(payload) > 0:
+            if pid == ARP_var:
+                from .Arp import ArpParser
+                prelayer = ArpParser.load_as_arp_layer(payload,Alr=1,verbose=verbose)
+            elif pid == 0x8863 or pid == 0x8864:
+                from .ppp import PPPoEParser
+                prelayer = PPPoEParser.load_as_pppoe_layer(payload, Alr=0, verbose=verbose)
+            elif pid == 0x880B:
+                from .ppp import PPP2bParser
+                prelayer = PPP2bParser.load_as_ppp2b_layer(payload, Alr=0, verbose=verbose)
+            else:
+                from .Detect_layer import DetectLayer
+                d = DetectLayer()
+                prelayer = d.start(payload, previous_layer="SNAP",verbose=verbose)
+
+            return snap / prelayer
+        return snap

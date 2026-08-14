@@ -5,11 +5,14 @@
 from typing import Optional, Union, Any
 import copy
 
+from cryptography.hazmat.asn1.asn1 import NoneType
+
 
 class BaseLayer:
 
     def __init__(self):
         self.payload: Optional['BaseLayer'] = None
+
         self._raw_payload: Optional[bytes] = None
 
     def __truediv__(self, other: Union['BaseLayer', bytes]) -> 'BaseLayer':
@@ -17,6 +20,9 @@ class BaseLayer:
 
         new_layer.set_payload(other)
         return new_layer
+
+    def __bool__(self) -> bool:
+        return True
 
     def __rtruediv__(self, other: Union['BaseLayer', bytes]) -> 'BaseLayer':
         if isinstance(other, BaseLayer):
@@ -36,7 +42,7 @@ class BaseLayer:
                 last = self.payload
                 while last.payload is not None:
                     last = last.payload
-                last.set_payload(payload)
+                last.payload = payload
             else:
                 self.payload = payload
         elif isinstance(payload, bytes):
@@ -53,19 +59,57 @@ class BaseLayer:
         else:
             return b''
 
-    def __getitem__(self, layer_type):
-        if isinstance(self, layer_type):
-            return self
-        if self.payload is not None:
-            return self.payload.__getitem__(layer_type)
-        raise KeyError(f"Layer {layer_type.__name__} not found")
+    def __getitem__(self, key):
+        if isinstance(key, tuple):
+            if len(key) == 2 and isinstance(key[1], int):
+                return self._get_nth_layer(key[0], key[1])
+
+        if isinstance(key, slice):
+            if key.stop is None:
+                return self._get_all_layers(key.start)
+            else:
+                return self._get_nth_layer(key.start, key.stop)
+
+        return self._get_nth_layer(key, 1)
+
+    def _get_nth_layer(self, layer_type, index):
+        if index == 0:
+            raise ValueError("Index must be non-zero")
+
+        if index < 0:
+            all_layers = self._get_all_layers(layer_type)
+            if not all_layers:
+                raise KeyError(f"Layer {layer_type.__name__} not found")
+            return all_layers[index]
+
+        current = self
+        found = 0
+        while current:
+            if isinstance(current, layer_type):
+                found += 1
+                if found == index:
+                    return current
+            current = current.payload
+
+        if found == 0:
+            raise KeyError(f"Layer {layer_type.__name__} not found")
+        raise IndexError(f"Only {found} layers found, requested {index}")
+
+    def _get_all_layers(self, layer_type):
+        results = []
+        current = self
+        while current:
+            if isinstance(current, layer_type):
+                results.append(current)
+            current = current.payload
+        return results
 
     def __contains__(self, layer_type):
-        if isinstance(self, layer_type):
+        try:
+            self._get_nth_layer(layer_type, 1)
             return True
-        if self.payload is not None:
-            return layer_type in self.payload
-        return False
+        except (KeyError, IndexError):
+            return False
 
     def build(self) -> bytes:
         raise NotImplementedError("Subclasses must implement build()")
@@ -76,14 +120,14 @@ class BaseLayer:
     def __bytes__(self) -> bytes:
         return self.build()
 
-    def __len__(self) -> int:
+    def __len__(self):
         return len(self.build())
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}>"
 
     def show(self, indent: int = 0) -> None:
-        from .Decoration.Colors import BOLD, BLUE, PURPLE, RESET, CYAN
+        from .Decoration.Colors import BOLD, BLUE, PURPLE, RESET
 
         pad = " " * indent
         print(f"{pad}{BOLD}--- [ {PURPLE}{self.__class__.__name__}{PURPLE}{RESET}{BOLD} ] ---{RESET}")
@@ -98,3 +142,6 @@ class BaseLayer:
 
     def _show_fields(self) -> str:
         return str(self)
+
+    def _show_fields_list(self):
+        return [str(self)]

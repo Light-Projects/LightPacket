@@ -32,7 +32,11 @@ class EthernetLayer(BaseLayer):
         layer = self.payload.__class__.__name__
         if self.ethertype is None:
             if layer == 'ArpLayer':
-                self.ethertype =  ARP
+                self.ethertype =  ARP_var
+            elif layer == 'PPPoELayer':
+                self.ethertype = 0x8863
+            elif layer == 'PPP2bLayer':
+                self.ethertype = 0x880B
             elif layer == 'VLANLayer':
                 self.numofvlan, layer = self.vlanhandler()
                 self.ethertype = self.check_layers_fromvar(layer)
@@ -40,6 +44,7 @@ class EthernetLayer(BaseLayer):
                 self.ethertype =  IPv4
         else:
             pass
+
         if self.ethertype < 0x0600:
             LLogger.error(error_code=ErrorCode.INVALID_DATA_LENGTH,message="Ether Type Field should not be less then 0x0600")
         payload_bytes = self.get_payload_bytes()
@@ -66,7 +71,11 @@ class EthernetLayer(BaseLayer):
 
     def check_layers_fromvar(self,var):
         if var == 'ArpLayer':
-            return ARP
+            return ARP_var
+        elif var == 'PPPoELayer':
+            return 0x8863
+        elif var == 'PPP2bLayer':
+            return 0x880B
         else:
             return IPv4
 
@@ -153,9 +162,15 @@ class EthernetParser:
 
                 vl = VLANParser.load_as_vlan_layer(raw_packet[0][12:14 + (number * 4)],verbose=verbose)
 
-                if len(payload) > 0 and Alr == 0 and payload != b'':
-                    if ethertype == ARP:
+                if len(payload) > 0 and Alr != 1 and payload != b'':
+                    if ethertype == ARP_var:
                         prelayer = ArpParser.load_as_arp_layer(payload, Alr=1, verbose=verbose)
+                    elif ethertype == 0x8863 or ethertype == 0x8864:
+                        from .ppp import PPPoEParser
+                        prelayer = PPPoEParser.load_as_pppoe_layer(payload, Alr=0, verbose=verbose)
+                    elif ethertype == 0x880B:
+                        from .ppp import PPP2bParser
+                        prelayer = PPP2bParser.load_as_ppp2b_layer(payload, Alr=0, verbose=verbose)
                     else:
                         d = DetectLayer()
                         prelayer = d.start(payload, Alr=0, previous_layer="Ethernet", verbose=verbose)
@@ -185,25 +200,32 @@ class EthernetParser:
                     print(f'   {BLUE}ETHER TYPE:{CYAN} {hex(ether_type)} '
                           f'{ETHERTYPE.get(ether_type, "Unknown")}{RESET}')
 
+                ether = EthernetLayer(
+                    dst=mac_dst_str,
+                    src=mac_src_str,
+                    ethertype=ether_type,
+                )
+
                 if len(payload) > 0 and Alr == 0:
-                    if ether_type == ARP:
+                    if ether_type == ARP_var:
                         prelayer = ArpParser.load_as_arp_layer(payload, Alr=1,verbose=verbose)
+                    elif ether_type == 0x8863 or ether_type == 0x8864:
+                        from .ppp import PPPoEParser
+                        prelayer = PPPoEParser.load_as_pppoe_layer(payload, Alr=0, verbose=verbose)
+                    elif ether_type == 0x880B:
+                        from .ppp import PPP2bParser
+                        prelayer = PPP2bParser.load_as_ppp2b_layer(payload, Alr=0, verbose=verbose)
                     else:
                         d = DetectLayer()
                         prelayer = d.start(payload, Alr=0, previous_layer="Ethernet",verbose=verbose)
+
+                    return ether / prelayer
+                return ether
             else:
                 from .Raw import RawParser
-                prelayer = RawParser.load_as_Raw_layer(raw_packet,verbose=verbose)
+                l = RawParser.load_as_Raw_layer(raw_packet,verbose=verbose)
+                return l
 
-
-            ether = EthernetLayer(
-                dst=mac_dst_str,
-                src=mac_src_str,
-                ethertype=ether_type,
-            )
-
-
-            return ether / prelayer
 
 def EthertypeHex(ether_type):
     return hex(ether_type)

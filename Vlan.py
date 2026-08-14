@@ -80,7 +80,6 @@ class VLANLayer(BaseLayer):
             f"vlan_id={self.vlan_id}"
         ]
 
-
 """
 VLAN Parser (separate from the builder)
 """
@@ -92,8 +91,6 @@ class VLANParser:
 
         if type(raw_packet) is not list:
             raw_packet = [raw_packet]
-            if hasattr(raw_packet[0], 'build') and type(raw_packet[0]) is not bytes:
-                raw_packet[0] = raw_packet[0].build()
 
         if len(raw_packet[0]) < 4:
             LLogger.error(
@@ -112,20 +109,6 @@ class VLANParser:
         vlan_id = tci & 0x0FFF
 
         length = len(vlan_header)
-        total = len(payload) + length
-        if verbose:
-            print(f"\n{BOLD}VLAN LAYER : {RESET}Len({PURPLE}{length}{RESET}) >")
-            print(f'   {BLUE}TPID:{CYAN} {hex(tpid)}')
-            print(f'   {BLUE}Priority:{CYAN} {priority}')
-            print(f'   {BLUE}DEI:{CYAN} {dei}')
-            print(f'   {BLUE}VLAN ID:{CYAN} {vlan_id}{RESET}')
-
-            if len(payload) > 0 and tpid == 0x88A8:
-                prelayer = VLANParser.load_as_vlan_layer(payload,verbose=verbose)
-            else:
-                prelayer = None
-
-
         vlan = VLANLayer(
             tpid=tpid,
             priority=priority,
@@ -133,8 +116,17 @@ class VLANParser:
             vlan_id=vlan_id
         )
 
-        if prelayer  != None:
+        if verbose:
+            print(f"\n{BOLD}VLAN LAYER : {RESET}Len({PURPLE}{length}{RESET}) >")
+            print(f'   {BLUE}TPID:{CYAN} {hex(tpid)}')
+            print(f'   {BLUE}Priority:{CYAN} {priority}')
+            print(f'   {BLUE}DEI:{CYAN} {dei}')
+            print(f'   {BLUE}VLAN ID:{CYAN} {vlan_id}{RESET}')
+
+        if len(payload) > 0 and tpid == 0x88A8:
+            prelayer = VLANParser.load_as_vlan_layer(payload,verbose=verbose)
             return vlan / prelayer
+
         return vlan
 
 

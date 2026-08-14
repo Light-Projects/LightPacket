@@ -5,6 +5,8 @@
 from Stp import *
 from Hex import *
 from EthernetII import *
+from isl import *
+from ppp import *
 from Arp import *
 from Dot3 import *
 from Vlan import *
@@ -19,6 +21,7 @@ from Layers.get_layers import *
 from Interfaces.WinInterfaces import *
 from Interfaces.NpcapInterfacesWin import *
 from BaseLayer import *
+from hepler.ls import *
 from Layers.L2Socket import *
 from Layers.Mac import *
 from Layers.IPtoa import *
@@ -36,7 +39,25 @@ def Ethernet(src: Union[str, bytes] = None, dst: Union[str, bytes] = BROADCAST_M
         src = get_default_interface_mac_windows()
     return EthernetLayer(dst=dst, src=src, ethertype=ethertype)
 
-def Arp(hwtype: int = None, ptype: int = None, maclen: int = None,
+def ISL(vlan_id: int = 100,type_code: int = ISL_TYPE_ETHERNET,user_priority: int = ISL_USER_NORMAL,
+        src: Optional[str] = None,dst: str = ISL_DST_MAC_1,bpdu: int = 1,index: int = 0,
+        reserved: int = 0) -> ISLLayer:
+
+    if src is None:
+        src = get_default_interface_mac_windows()
+
+    return ISLLayer(vlan_id,type_code,user_priority,src,dst,bpdu=bpdu,index=index,reserved=reserved)
+
+def PPP(address=0xFF, control=0x03, proto=0x0021):
+    return PPPLayer(address=address, control=control, proto=proto)
+
+def PPP2b(proto=0x0021):
+    return PPP2bLayer(proto=proto)
+
+def PPPoE(version=0x1, type=0x1, code=0x00,ssid=0x0000,lenght=0):
+    return PPPoELayer(version=version, type=type, code=code, ssid=ssid, lenght=lenght)
+
+def ARP(hwtype: int = None, ptype: int = None, maclen: int = None,
         plen: int = None, opcode: int = None, macsrc: Union[str, bytes] = None,
         ipsrc: str = None, macdst: Union[str, bytes] = None, ipdst: str = None) -> ArpLayer:
 
@@ -75,7 +96,7 @@ def LLC(dsap: Union[str, bytes] = None,ssap: Union[str, bytes] = None,
         control: Union[str, bytes] = LLC_UI):
     return LLCLayer(dsap=dsap, ssap=ssap, control=control)
 
-def SNAP(oui: Union[str, bytes] = 0x000000,pid: Union[str, bytes] = ARP):
+def SNAP(oui: Union[str, bytes] = 0x000000,pid: Union[str, bytes] = None):
     return SNAPLayer(oui=oui, pid=pid)
 
 def STP(protocol_version=0x00, bpdu_type=0x00, flags=0x00,

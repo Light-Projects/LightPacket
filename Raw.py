@@ -52,10 +52,7 @@ class RawLayer(BaseLayer):
     def _show_fields(self) -> list[str]:
         payload = self._raw_payload or b''
         fields = []
-        if len(payload) > 32:
-            fields.append(f"payload={payload[:32]}...")
-        else:
-            fields.append(f"payload={payload}")
+        fields.append(f"payload={payload}")
         fields.append(f"len={len(payload)}")
         return fields
 

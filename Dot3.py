@@ -135,6 +135,11 @@ class Dot3Parser:
 
 
                 vl = VLANParser.load_as_vlan_layer(raw_packet[0][12:14 + (number * 4)],verbose=verbose)
+                dot3 = Dot3Layer(
+                    dst=mac_dst_str,
+                    src=mac_src_str,
+                    length=ethertype,
+                )
 
                 if len(payload) > 0 and payload != b'':
                     if is_llc(payload):
@@ -146,20 +151,8 @@ class Dot3Parser:
                         d = DetectLayer()
                         prelayer = d.start(packet=payload, previous_layer="Dot3", verbose=verbose)
 
-                dot3 = Dot3Layer(
-                    dst=mac_dst_str,
-                    src=mac_src_str,
-                    length=ethertype,
-                )
-
-                if vl != None:
-                    if prelayer != None:
-                        return dot3 / vl / prelayer
-                    return dot3 / vl
-                elif prelayer != None:
-                    return dot3 / prelayer
-                else:
-                    return dot3
+                    return dot3 / vl / prelayer
+                return dot3 / vl
 
         elif length > 0x05DC:
             from .EthernetII import EthernetParser
@@ -171,6 +164,12 @@ class Dot3Parser:
                 print(f'   {BLUE}MAC SRC:{CYAN} {mac_src_str}')
                 print(f'   {BLUE}LENGHT:{CYAN} {hex(length)}{RESET}')
 
+            dot3 = Dot3Layer(
+                dst=mac_dst_str,
+                src=mac_src_str,
+                length=length,
+            )
+
             if len(payload) > 0:
                 if is_llc(payload):
                     from .LLC import LLCParser
@@ -180,12 +179,6 @@ class Dot3Parser:
                     d = DetectLayer()
                     prelayer = d.start(packet=payload, previous_layer="Dot3",verbose=verbose)
 
-            dot3 = Dot3Layer(
-                dst=mac_dst_str,
-                src=mac_src_str,
-                length=length,
-            )
-
-
-            return dot3 / prelayer
+                return dot3 / prelayer
+            return dot3
 

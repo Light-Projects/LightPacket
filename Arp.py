@@ -172,7 +172,6 @@ class ArpParser:
             ipdst=target_ip_str
         )
 
-
         return arp
 
 

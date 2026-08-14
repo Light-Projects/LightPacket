@@ -107,6 +107,12 @@ class LLCParser:
             print(f'   {BLUE}SSAP:{CYAN} {hex(ssap)} {SAP_VALUES.get(ssap,'Unknown')}')
             print(f'   {BLUE}CONTROL:{CYAN} {hex(control)}{RESET}')
 
+        llc = LLCLayer(
+            dsap=dsap,
+            ssap=ssap,
+            control=control
+        )
+
         if len(payload) > 0:
             if ssap == SAP_LLC_SNAP and dsap == SAP_LLC_SNAP:
                 from .Snap import SNAPParser
@@ -120,10 +126,5 @@ class LLCParser:
                 prelayer = d.start(payload, previous_layer="LLC",verbose=verbose)
 
 
-        llc = LLCLayer(
-            dsap=dsap,
-            ssap=ssap,
-            control=control
-        )
-
-        return llc / prelayer
+            return llc / prelayer
+        return llc
