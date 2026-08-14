@@ -8,6 +8,9 @@ class LightPacketError(Exception):
 class InvalidDataLengthError(LightPacketError):
     pass
 
+class NotFoundError(LightPacketError):
+    pass
+
 class InvalidMacAddressError(LightPacketError):
     pass
 

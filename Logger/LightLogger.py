@@ -3,10 +3,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import logging
-from logging.handlers import RotatingFileHandler
 import sys
-import os
-import time
 from ..Decoration.Colors import REDBG ,RESETBG ,YELLOW ,YELLOWBG ,RESET ,RED
 from .Errors import *
 
@@ -15,12 +12,14 @@ class ErrorCode:
     INVALID_DATA_TYPE = "E002"
     INVALID_DATA_LENGTH = "E003"
     INVALID_IP = "E004"
+    NOT_FOUND = "E005"
 
     ERROR_MAP = {
         'E001': InvalidMacAddressError,
         'E002': InvalidDataTypeError,
         'E003': InvalidDataLengthError,
         'E004': InvalidIPAddressError,
+        'E005': NotFoundError
     }
 
 class WarningCode:
