@@ -35,6 +35,9 @@ LightPacket/
 ├── Raw.py                        # Raw data layer
 ├── EthernetII.py                 # Ethernet layer
 ├── Arp.py                        # ARP layer
+├── isl.py                        # ISL layer
+├── GetMac.py                     # Mac helper
+├── ppp.py                        # PPP,PPP2b and PPPoE layers
 ├── Dot3.py                       # IEEE 802.3 layer
 ├── LLC.py                        # Logical Link Control layer
 ├── Snap.py                       # SNAP layer
@@ -46,6 +49,10 @@ LightPacket/
 ├── Hex.py                        # hexdump function
 ├── Decoration/                 
 │   └── Colors.py                 # ANSI color formatting
+├── helper/ 
+│   ├── ls.py                     # Layers informations
+│   └── protos/            
+│       └── *.json                # json files for every LightPacket proto
 ├── Interfaces/                   # Platform-specific network interfaces
 │   ├── LinuxInterfaces.py        # Linux interface enumeration
 │   ├── LibpcapInterfacesLin.py   # libpcap interface handling
@@ -53,6 +60,12 @@ LightPacket/
 │   ├── NpcapInterfacesWin.py     # Npcap interface handling
 │   ├── UnixInterfaces.py         # BSD/macOS interface enumeration (libpcap)
 │   └── LibpcapInterfacesUnix.py  # BSD/macOS simple interface handling
+├── utils/                        # Layers Utilities
+│   ├── CIDR.py                   # Target Parsing and validating
+│   ├── FCS.py                    # crc and fcs checksums
+│   ├── VlanUtils.py              # Vlan Utilities
+│   └── Nsec/            
+│       └── arp_resolution.py     # buit-in arp scaning        
 ├── lib/                          # C extensions
 │   ├── pcap_writer.c             # Pcap writer implementation
 │   ├── pcap_writer.h             # Pcap writer header 
