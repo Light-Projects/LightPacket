@@ -139,7 +139,7 @@ winget install Nmap.Npcap
 ### Install from Source (NOTE: for Mac and Windows you should change the lib ext in setup.py and for compiling as well)
 
 ```bash
-git clone https://github.com/adamboulaaz92-jpg/LightPacket.git
+https://github.com/Light-Projects/LightPacket
 cd LightPacket
 gcc ./lib/pcap_reader.c -o ./lib/libpcap_reader.so -Wall -O2 -shared -fPIC
 gcc ./lib/pcap_writer.c -o ./lib/libpcap_writer.so -Wall -O2 -shared -fPIC
