@@ -23,9 +23,6 @@ setup(
     keywords="packet manipulation, networking, security, scanning, framework",
     python_requires=">=3.8",
     license="MPL-2.0",
-    classifiers=[
-        "License :: OSI Approved :: Mozilla Public License 2.0 (MPL-2.0)",
-    ],
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/adamboulaaz92-jpg/LightPacket",
