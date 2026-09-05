@@ -2,7 +2,7 @@
 
 [![License: MPL-2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS%20%7C%20BSD-lightgrey.svg)](https://github.com/adamboulaaz92-jpg/LightPacket)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS%20%7C%20BSD-lightgrey.svg)](https://github.com/Light-Projects/LightPacket)
 
 ![](images/LightPacket-Logo.png)
 
@@ -13,31 +13,46 @@
 ### Key Features
 
 - **Cross-Platform Support**: Works on Linux, macOS, BSD, Unix (libpcap) and Windows (Npcap)
-- **Layer 2 Packet Construction**: Build Ethernet, ARP, LLC, SNAP, Dot3, VLAN (802.1Q/802.1ad QinQ), and STP packets
+- **Layer 2 Packet Construction**: Build Ethernet, ARP, LLC, SNAP, Dot3, VLAN (802.1Q/802.1ad QinQ), STP, PPP, PPPoE, EAPOL, and ISL packets
 - **Automatic Layer Detection**: Parse raw bytes into structured packet objects
 - **Packet Stacking**: Chain multiple protocol layers together using `/` operator
 - **Interface Detection**: Automatically detect and use default network interfaces
 - **Rich Packet Representation**: Human-readable packet displays with color support
-- **Send/Receive Capabilities**: Send and receive packets at Layer 2
+- **Send/Receive Capabilities**: Send and receive packets at Layer 2 (both `L2Socket` and the new `L2Packet` for Linux)
 - **Custom Packet Parsing**: Extensible parser architecture
 - **Comprehensive Error Handling**: Custom error classes with detailed messages
 - **MAC Address Utilities**: Flexible MAC address handling
 - **PCAP Reading/Writing**: C-optimized pcap file I/O operations
+- **BPF Filter Compilation**: Built-in support for Berkeley Packet Filters using libpcap
 
 ---
 
-## Architecture Overview
+## New in Version 0.0.3
+
+- **Native AF_PACKET Socket (`L2Packet`)** for Linux: a lightweight, high-performance raw socket implementation that bypasses libpcap for sending and receiving. It supports BPF filtering, blocking/non-blocking modes, and direct interface binding.
+- **Platform-specific organisation**: The library now uses a `platforms/` directory to keep OS-specific code separate (e.g., `platforms/linux/L2Packet.py`).
+- **Enhanced EAPOL Support**: Full parsing and construction of EAPOL, EAP-MD5, EAP-Identity, and EAP-Success/Failure frames.
+- **Improved VLAN Handling**: Automatic detection of stacked VLAN tags (QinQ) with `vlannum()` and better integration with Ethernet/Dot3 parsing.
+- **C-optimised PCAP I/O**: Faster reading and writing of `.pcap` files using the C extensions.
+
+---
+
+## Architecture Overview (0.0.3)
 
 ```
 LightPacket/
 ├── __init__.py                   # Package entry point
 ├── BaseLayer.py                  # Core layer abstraction
+├── l2.py                         # All layers main classes
 ├── Raw.py                        # Raw data layer
 ├── EthernetII.py                 # Ethernet layer
 ├── Arp.py                        # ARP layer
-├── isl.py                        # ISL layer
 ├── GetMac.py                     # Mac helper
-├── ppp.py                        # PPP,PPP2b and PPPoE layers
+├── GetIPv4.py                    # IPv4 helper
+├── ppp.py                        # PPP, PPP2b, PPPoE layers
+├── eapol.py                      # EAPOL and EAP Methods
+├── bpf.py                        # BPF Comiplation
+├── eapol.py                      # EAPOL and EAP sub-layers
 ├── Dot3.py                       # IEEE 802.3 layer
 ├── LLC.py                        # Logical Link Control layer
 ├── Snap.py                       # SNAP layer
@@ -45,14 +60,21 @@ LightPacket/
 ├── Vlan.py                       # VLAN (802.1Q/802.1ad QinQ) layer
 ├── Detect_layer.py               # Automatic protocol detection
 ├── Consts.py                     # Protocol constants
-├── Version.py                    # Version information
+├── Version.py                    # Version information (now 0.0.3)
 ├── Hex.py                        # hexdump function
-├── Decoration/                 
+├── platforms/                    # Platform-specific implementations
+│   └── linux/
+│       └── L2Packet.py           # AF_PACKET socket class
+├── Wireless/                     # Wireless Protocols
+│   └── wlan.py                   # IEEE 802.11 (WiFi,Beacon,etc ...)
+├── data/
+│   └── oui.txt                  # Organizationally Unique Identifier (OUI)
+├── Decoration/
 │   └── Colors.py                 # ANSI color formatting
-├── helper/ 
-│   ├── ls.py                     # Layers informations
-│   └── protos/            
-│       └── *.json                # json files for every LightPacket proto
+├── helper/
+│   ├── ls.py                     # Layer information
+│   └── protos/
+│       └── *.json                # JSON definitions for each protocol
 ├── Interfaces/                   # Platform-specific network interfaces
 │   ├── LinuxInterfaces.py        # Linux interface enumeration
 │   ├── LibpcapInterfacesLin.py   # libpcap interface handling
@@ -60,23 +82,23 @@ LightPacket/
 │   ├── NpcapInterfacesWin.py     # Npcap interface handling
 │   ├── UnixInterfaces.py         # BSD/macOS interface enumeration (libpcap)
 │   └── LibpcapInterfacesUnix.py  # BSD/macOS simple interface handling
-├── utils/                        # Layers Utilities
-│   ├── CIDR.py                   # Target Parsing and validating
-│   ├── FCS.py                    # crc and fcs checksums
-│   ├── VlanUtils.py              # Vlan Utilities
-│   └── Nsec/            
-│       └── arp_resolution.py     # buit-in arp scaning        
+├── utils/                        # Layer utilities
+│   ├── CIDR.py                   # Target parsing and validation
+│   ├── FCS.py                    # CRC and FCS checksums
+│   ├── VlanUtils.py              # VLAN utilities
+│   └── Nsec/
+│       └── arp_resolution.py     # Built-in ARP scanning
 ├── lib/                          # C extensions
 │   ├── pcap_writer.c             # Pcap writer implementation
-│   ├── pcap_writer.h             # Pcap writer header 
+│   ├── pcap_writer.h             # Pcap writer header
 │   ├── pcap_reader.c             # Pcap reader implementation
 │   └── pcap_reader.h             # Pcap reader header
 ├── Saving/                       # PCAP read/write functions
 │   ├── pcapreader.py             # pcap_reader python wrapper
-│   └── pcapwriter.py             # pcap_writer python wrapper 
+│   └── pcapwriter.py             # pcap_writer python wrapper
 ├── Layers/                       # Helper layer components
-│   ├── L2Socket.py               # Windows L2 socket
-│   ├── L2SocketL.py              # Linux L2 socket
+│   ├── L2Socket.py               # Windows L2 socket (Npcap)
+│   ├── L2SocketL.py              # Linux L2 socket (libpcap)
 │   ├── Mac.py                    # MAC address utilities
 │   ├── IPtoa.py                  # IP address utilities
 │   └── IS_LLC.py                 # LLC detection utility
@@ -84,9 +106,8 @@ LightPacket/
 │   ├── LightLogger.py            # Custom logger with color support
 │   └── Errors.py                 # Custom error classes
 ├── LightPacketWin.py             # Windows API wrapper
-└── LightPacketLin.py             # Linux API wrapper
-└── LightPacketUnix.py            # Unix Like Systems API wrapper
-
+├── LightPacketLin.py             # Linux API wrapper
+└── LightPacketUnix.py            # Unix-like systems API wrapper
 ```
 
 ---
@@ -104,23 +125,23 @@ sudo zypper install libpcap1        # OpenSUSE/SUSE
 sudo apk add libpcap-dev            # Alpine
 sudo emerge net-libs/libpcap        # Gentoo
 sudo xbps-install -S libpcap-devel  # Void
-sudo tce-load -wi libpcap           # Tiny Core  
+sudo tce-load -wi libpcap           # Tiny Core
 ```
 
-***Mac:***
+**Mac:**
 ```bash
 brew install libpcap
 # or port
 sudo port install libpcap
 ```
 
-***BSD:***
+**BSD:**
 ```bash
 pkg install libpcap   # FreeBSD
 pkg_add libpcap       # OpenBSD/NetBSD
 ```
 
-***Unix:***
+**Unix:**
 ```bash
 pkg install system/library/libpcap      # illumos (OpenIndiana)
 
@@ -136,30 +157,34 @@ pkgadd -d http://get.opencsw.org/now    # Solaris
 winget install Nmap.Npcap
 ```
 
-### Install from Source (NOTE: for Mac and Windows you should change the lib ext in setup.py and for compiling as well)
+### Install from Source
+
+> **Note:** For Mac and Windows you should change the lib extension in `setup.py` and for compiling as well.
 
 ```bash
-https://github.com/Light-Projects/LightPacket
+git clone https://github.com/Light-Projects/LightPacket
 cd LightPacket
 gcc ./lib/pcap_reader.c -o ./lib/libpcap_reader.so -Wall -O2 -shared -fPIC
 gcc ./lib/pcap_writer.c -o ./lib/libpcap_writer.so -Wall -O2 -shared -fPIC
 python setup.py install
 ```
 
-### Install from pip image (NOTE: For Linux/Windows/Mac)
+### Install from PyPI
+
+Works for Linux/Windows/Mac.
 
 ```bash
 pip install lightpacket
 ```
 
-### Dependencies
+### Dependencies (optional)
 
 ```bash
-# For interface detection (recommended)
+# For enhanced interface detection (recommended)
 pip install netifaces
 
-# For Linux socket operations
-pip install pyroute2  # optional
+# For Linux advanced routing / socket operations
+pip install pyroute2
 ```
 
 ---
@@ -187,10 +212,11 @@ The foundation for all protocol layers.
 
 **Example:**
 ```python
-from LightPacket import Ethernet, Arp
+from LightPacket.Arp import ARP
+from LightPacket.EthernetII import Ethernet
 
 # Stack layers using division operator
-packet = Ethernet() / Arp()
+packet = Ethernet() / ARP()
 ```
 
 ---
@@ -200,9 +226,13 @@ packet = Ethernet() / Arp()
 ### EthernetLayer (`EthernetII.py`)
 
 ```python
-def Ethernet(src: Union[str, bytes] = None, 
-             dst: Union[str, bytes] = BROADCAST_MAC,
-             ethertype: Union[str, bytes] = None) -> EthernetLayer
+class Ethernet(BaseLayer):
+    def __init__(self, dst: Union[str, bytes] = BROADCAST_MAC, src: Union[str, bytes]= GetMac(),
+                 ethertype: Union[str, bytes] = None):
+        super().__init__()
+        self.dst = MacAddress(dst, d_or_s=1)
+        self.src = MacAddress(src, d_or_s=0)
+        self.ethertype = ethertype
 ```
 
 **Parameters:**
@@ -212,7 +242,7 @@ def Ethernet(src: Union[str, bytes] = None,
 
 **Example:**
 ```python
-from LightPacket import Ethernet
+from LightPacket.EthernetII import Ethernet
 
 # Create Ethernet layer with default settings
 eth = Ethernet()
@@ -230,11 +260,39 @@ eth = Ethernet(
 ### ArpLayer (`Arp.py`)
 
 ```python
-def Arp(hwtype: int = None, ptype: int = None, 
-        maclen: int = None, plen: int = None, 
-        opcode: int = None, macsrc: Union[str, bytes] = None,
-        ipsrc: str = None, macdst: Union[str, bytes] = None, 
-        ipdst: str = None) -> ArpLayer
+class ARP(BaseLayer):
+    def __init__(self, hwtype: int = None, ptype: int = None, maclen: int = None,
+                 plen: int = None, opcode: int = None, macsrc: Union[str, bytes] = None,
+                 ipsrc: str = None, macdst: Union[str, bytes] = None, ipdst: str = None):
+        super().__init__()
+        if macsrc is None:
+            macsrc = GetMac()
+        if macdst is None:
+            macdst = BROADCAST_MAC
+        if hwtype is None:
+            hwtype = 1
+        if ptype is None:
+            ptype = IPv4
+        if maclen is None:
+            maclen = 6
+        if plen is None:
+            plen = 4
+        if opcode is None:
+            opcode = 1
+        if ipsrc is None:
+            ipsrc = GetIPv4()
+        if ipdst is None:
+            ipdst = GetIPv4Gateway()
+
+        self.hwtype = hwtype
+        self.ptype = ptype
+        self.maclen = maclen
+        self.plen = plen
+        self.opcode = opcode
+        self.macsrc = MacAddress(macsrc, d_or_s=0)
+        self.ipsrc = ipsrc
+        self.macdst = MacAddress(macdst, d_or_s=1)
+        self.ipdst = ipdst
 ```
 
 **Parameters:**
@@ -250,17 +308,17 @@ def Arp(hwtype: int = None, ptype: int = None,
 
 **Example:**
 ```python
-from LightPacket import Arp
+from LightPacket.Arp import ARP
 
 # Create ARP request
-arp = Arp(
+arp = ARP(
     opcode=1,
     ipsrc='192.168.1.10',
     ipdst='192.168.1.1'
 )
 
 # Create ARP reply
-arp_reply = Arp(
+arp_reply = ARP(
     opcode=2,
     macsrc='00:11:22:33:44:55',
     ipsrc='192.168.1.1',
@@ -274,9 +332,12 @@ arp_reply = Arp(
 ### LLC Layer (`LLC.py`)
 
 ```python
-def LLC(dsap: Union[str, bytes] = None,
-        ssap: Union[str, bytes] = None,
-        control: Union[str, bytes] = LLC_UI) -> LLCLayer
+class LLC(BaseLayer):
+    def __init__(self, dsap=None, ssap=None, control=0x03):
+        super().__init__()
+        self.dsap = dsap
+        self.ssap = ssap
+        self.control = control
 ```
 
 **Parameters:**
@@ -290,7 +351,7 @@ def LLC(dsap: Union[str, bytes] = None,
 
 **Example:**
 ```python
-from LightPacket import LLC
+from LightPacket.LLC import LLC
 
 llc = LLC(dsap=0xAA, ssap=0xAA, control=0x03)
 ```
@@ -300,8 +361,11 @@ llc = LLC(dsap=0xAA, ssap=0xAA, control=0x03)
 ### SNAP Layer (`Snap.py`)
 
 ```python
-def SNAP(oui: Union[str, bytes] = 0x000000,
-         pid: Union[str, bytes] = ARP) -> SNAPLayer
+class SNAP(BaseLayer):
+    def __init__(self, oui=0x000000, pid=None):
+        super().__init__()
+        self.oui = oui
+        self.pid = pid
 ```
 
 **Parameters:**
@@ -310,7 +374,7 @@ def SNAP(oui: Union[str, bytes] = 0x000000,
 
 **Example:**
 ```python
-from LightPacket import SNAP
+from LightPacket.Snap import SNAP
 
 snap = SNAP(oui=0x000000, pid=0x0806)  # ARP over SNAP
 ```
@@ -320,12 +384,28 @@ snap = SNAP(oui=0x000000, pid=0x0806)  # ARP over SNAP
 ### STP Layer (`Stp.py`)
 
 ```python
-def STP(protocol_version=0x00, bpdu_type=0x00, flags=0x00,
-        root_priority=0x8000, root_mac: Union[str,bytes] = b'\x00\x11\x22\x33\x44\x55',
-        root_path_cost=0, bridge_priority=0x8000,
-        bridge_mac: Union[str,bytes] = b'\x00\x11\x22\x33\x44\x55', 
-        port_id=0x8001, message_age=0, max_age=5120, 
-        hello_time=512, forward_delay=3840) -> STPLayer
+class STP(BaseLayer):
+    def __init__(self, protocol_id=0x0000, protocol_version=0x00, bpdu_type=0x00, flags=0x00,
+                 root_priority=0x8000, root_mac: Union[str,bytes] =b'\x00\x11\x22\x33\x44\x55',
+                 root_path_cost=0, bridge_priority=0x8000,
+                 bridge_mac : Union[str,bytes] =b'\x00\x11\x22\x33\x44\x55', port_id=0x8001,
+                 message_age=0, max_age=5120, hello_time=512,
+                 forward_delay=3840):
+        super().__init__()
+        self.protocol_id = protocol_id
+        self.protocol_version = protocol_version
+        self.bpdu_type = bpdu_type
+        self.flags = flags
+        self.root_priority = root_priority
+        self.root_mac = MacAddress(root_mac)
+        self.root_path_cost = root_path_cost
+        self.bridge_priority = bridge_priority
+        self.bridge_mac = MacAddress(bridge_mac)
+        self.port_id = port_id
+        self.message_age = message_age
+        self.max_age = max_age
+        self.hello_time = hello_time
+        self.forward_delay = forward_delay
 ```
 
 **Parameters:**
@@ -345,7 +425,7 @@ def STP(protocol_version=0x00, bpdu_type=0x00, flags=0x00,
 
 **Example:**
 ```python
-from LightPacket import STP
+from LightPacket.Stp import STP
 
 stp = STP(
     root_priority=0x8000,
@@ -362,9 +442,13 @@ stp = STP(
 ### Dot3Layer (`Dot3.py`)
 
 ```python
-def Dot3(dst: Union[str, bytes] = BROADCAST_MAC,
-         src: Union[str, bytes] = None, 
-         length: int = 0) -> Dot3Layer
+class Dot3(BaseLayer):
+    def __init__(self, dst: Union[str, bytes] = BROADCAST_MAC, src: Union[str, bytes] = GetMac(),
+                 length: int = 0):
+        super().__init__()
+        self.dst = MacAddress(dst, d_or_s=1)
+        self.src = MacAddress(src, d_or_s=0)
+        self.length = length
 ```
 
 **Parameters:**
@@ -377,8 +461,13 @@ def Dot3(dst: Union[str, bytes] = BROADCAST_MAC,
 ### VLANLayer (`Vlan.py`)
 
 ```python
-class VLANLayer(tpid: int = 0x8100, priority: int = 0,
-                 dei: int = 0, vlan_id: int = 1)
+class VLAN(BaseLayer):
+    def __init__(self, tpid=0x8100, priority=0, dei=0, vlan_id=1):
+        super().__init__()
+        self.tpid = tpid
+        self.priority = priority & 0x07
+        self.dei = dei & 0x01
+        self.vlan_id = vlan_id & 0x0FFF
 ```
 
 **Parameters:**
@@ -389,13 +478,15 @@ class VLANLayer(tpid: int = 0x8100, priority: int = 0,
 
 **Example:**
 ```python
-from LightPacket import Ethernet, VLAN, Arp
+from LightPacket.Arp import ARP
+from LightPacket.Vlan import VLAN
+from LightPacket.EthernetII import Ethernet
 
 # Single-tagged 802.1Q VLAN packet
-packet = Ethernet() / VLAN(vlan_id=100) / Arp()
+packet = Ethernet() / VLAN(vlan_id=100) / ARP()
 
 # Double-tagged QinQ (802.1ad) packet - stack two VLAN layers
-packet = Ethernet() / VLAN(vlan_id=10) / VLAN(vlan_id=20) / Arp()
+packet = Ethernet() / VLAN(vlan_id=10) / VLAN(vlan_id=20) / ARP()
 
 # VLAN with custom priority and DEI
 vlan = VLAN(priority=5, dei=1, vlan_id=200)
@@ -406,10 +497,93 @@ vlan = VLAN(priority=5, dei=1, vlan_id=200)
 
 ---
 
+### EAPOL and EAP sub-layers (`eapol.py`)
+
+```python
+from LightPacket.eapol import (
+    EAPOL,EAP_TLS,EAP_MD5,EAP_STATE,
+    EAP_IDENTITY,EAP_Key,EAP_TTLS,
+    EAP_PEAP,EAP_FAST,EAP_LEAP,EAP_MSCHAPv2,
+    EAP_NAK,EAP_NOTIFICATION,EAP_PWD,EAP_GTC,
+    EAP_OTP
+)
+
+# EAPOL wrapper
+eapol = EAPOL(version=2, code=0, length=0)
+
+# EAP-Identity (Request/Response)
+eap_id = EAP_IDENTITY(code=1, id=1, type=1, identity=b'user')
+
+# EAP-MD5 (Challenge/Response)
+eap_md5 = EAP_MD5(code=1, id=1, type=4, value_size=16, value=b'\x01\x02...', name=b'host')
+
+# EAP Success/Failure
+eap_success = EAP_STATE(code=3, id=1)   # code 3 = Success, 4 = Failure
+
+# EAP-TLS (Request/Response)
+eap_tls = EAP_TLS(code=1,id=103,type=13,L=1,tls_data=b'Lagier')
+
+# EAP-TTLS (Request/Response)
+eap_ttls = EAP_TTLS(code=1,id=103,type=21,L=1,tls_data=b'Lagier')
+
+# EAP-KEY 
+eap_key = EAP_Key(descriptor=2,key_info=0)
+
+
+```
+
+---
+
+### WiFi (`wlan.py`)
+
+
+```python
+from LightPacket.Wireless.wlan import (
+    WiFi,Beacon,Element,ProbeRequest,
+    ProbeResponse
+)
+from LightPacket import MacAddress,GetMac
+
+Packet = WiFi(
+    duration=0x0000,
+    addr1=b'\xff\xff\xff\xff\xff\xff',
+    addr2=bytes(MacAddress(GetMac.GetMac())),
+    addr3=bytes(MacAddress(GetMac.GetMac())),
+    seq_control=0x0000,
+) / Beacon(
+    timestamp=0,
+    beacon_interval=100,
+    capability=0,
+) / Element(
+    ie_id=0,
+    data=b'Light-AP'
+) / Element(
+    ie_id=45,
+    data=b'n\x00\x17\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+) / Element(
+    ie_id=3,
+    data=b'\x06'
+) / Element(
+    ie_id=1,
+    data=b'\x82\x84\x86\x88\x96'
+) / Element(
+    ie_id=48,
+    data=b'\x01\x00\x00\x0f\xac\x04\x01\x00\x00\x0f\xac\x04\x01\x00\x00\x0f\xac\x02\x00\x00'
+) / Element(
+    ie_id=61,
+    data=b'\x06\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff'
+)
+```
+
+---
+
 ### RawLayer (`Raw.py`)
 
 ```python
-def Raw(payload: bytes = b'Test LightPacket Raw Layer') -> RawLayer
+class Raw(BaseLayer):
+    def __init__(self, payload: Optional[bytes] = b'Test LightPacket Raw Layer'):
+        super().__init__()
+        self._raw_payload = payload or b''
 ```
 
 **Parameters:**
@@ -417,7 +591,7 @@ def Raw(payload: bytes = b'Test LightPacket Raw Layer') -> RawLayer
 
 **Example:**
 ```python
-from LightPacket import Raw
+from LightPacket.Raw import Raw
 
 raw = Raw(b'\x01\x02\x03\x04')
 ```
@@ -429,10 +603,12 @@ raw = Raw(b'\x01\x02\x03\x04')
 ### Basic Packet Construction
 
 ```python
-from LightPacket import Ethernet, Arp, Raw
+from LightPacket.EthernetII import Ethernet
+from LightPacket.Raw import Raw
+from LightPacket.Arp import ARP
 
 # Build an ARP request packet
-packet = Ethernet() / Arp()
+packet = Ethernet() / ARP()
 packet_bytes = packet.build()
 
 # Build packet with custom MAC addresses
@@ -441,7 +617,7 @@ eth = Ethernet(
     dst='ff:ff:ff:ff:ff:ff',
     ethertype=0x0806
 )
-arp = Arp(
+arp = ARP(
     opcode=1,
     ipsrc='192.168.1.10',
     ipdst='192.168.1.1'
@@ -457,10 +633,15 @@ packet = eth / raw
 ### Stacking Multiple Layers
 
 ```python
-from LightPacket import Ethernet, Dot3, LLC, SNAP, Arp
+from LightPacket.EthernetII import Ethernet
+from LightPacket.LLC import LLC
+from LightPacket.Dot3 import Dot3
+from LightPacket.Arp import ARP
+from LightPacket.Snap import SNAP
+from LightPacket.Stp import STP
 
 # Ethernet over LLC over SNAP
-packet = Ethernet() / LLC() / SNAP() / Arp()
+packet = Ethernet() / LLC() / SNAP() / ARP()
 
 # Dot3 with LLC
 packet = Dot3() / LLC()
@@ -472,7 +653,9 @@ packet = Dot3() / LLC() / STP()
 ### STP Packet Example
 
 ```python
-from LightPacket import Ethernet, LLC, STP
+from LightPacket.EthernetII import Ethernet
+from LightPacket.LLC import LLC
+from LightPacket.Stp import STP
 
 # Build an STP configuration BPDU
 stp_packet = (
@@ -514,55 +697,51 @@ if parsed:
 Each layer has its own parser class:
 
 ```python
-from LightPacket import EthernetParser, ArpParser, LLCParser
+
+raw_bytes = b'\xff\xff...'
 
 # Parse Ethernet layer
+from LightPacket.EthernetII import EthernetParser
 result = EthernetParser.load_as_ethernet_layer(raw_bytes, verbose=True)
 
 # Parse ARP layer
+from LightPacket.Arp import ArpParser
 result = ArpParser.load_as_arp_layer(raw_bytes, verbose=True)
 
 # Parse LLC layer
+from LightPacket.LLC import LLCParser
 result = LLCParser.load_as_llc_layer(raw_bytes, verbose=True)
 
 # Parse STP layer
-from LightPacket import STPParser
+from LightPacket.Stp import STPParser
 result = STPParser.load_as_stp_layer(raw_bytes, verbose=True)
 
 # Parse VLAN layer (auto-detects and unwraps stacked QinQ tags)
-from LightPacket import VLANParser
+from LightPacket.Vlan import VLANParser
 result = VLANParser.load_as_vlan_layer(raw_bytes, verbose=True)
 ```
 
 ---
 
-## L2Socket - Packet Sending and Receiving
+## Packet Sending and Receiving
 
-### Linux (`L2SocketL.py`)
+### L2Socket (Cross-platform, libpcap/Npcap)
 
+`L2Socket` is the classic cross-platform socket that uses libpcap (or Npcap on Windows). It offers `srp1`, `srp`, `recvl2`, and `set_filter`.
+
+**Linux/macOS/BSD:**
 ```python
 from LightPacket import L2Socket
-
-# Create socket on default interface
-socket = L2Socket()
-
-# Create socket on specific interface
-socket = L2Socket(iface='eth0', promisc=True, snaplen=65535)
+sock = L2Socket(iface='eth0', promisc=True, snaplen=65535)
 ```
 
-### Windows (`L2Socket.py`)
-
+**Windows:**
 ```python
 from LightPacket import L2Socket
-
-# Create socket on default interface
-socket = L2Socket()
-
-# Create socket on specific interface
-socket = L2Socket(iface=r'\Device\NPF_{GUID}', promisc=True)
+sock = L2Socket(iface=r'\Device\NPF_{GUID}')
 ```
 
-### Socket Methods
+#### Socket Methods
 
 | Method | Description |
 |--------|-------------|
@@ -575,13 +754,15 @@ socket = L2Socket(iface=r'\Device\NPF_{GUID}', promisc=True)
 
 **Example:**
 ```python
-from LightPacket import L2Socket, Ethernet, Arp
+from LightPacket import L2Socket
+from LightPacket.EthernetII import Ethernet
+from LightPacket.Arp import ARP
 
 # Create socket
 sock = L2Socket()
 
 # Build ARP request
-packet = Ethernet() / Arp(
+packet = Ethernet() / ARP(
     opcode=1,
     ipsrc='192.168.1.10',
     ipdst='192.168.1.1'
@@ -597,14 +778,14 @@ if response:
 sock.close()
 ```
 
-### Advanced Socket Usage
+#### Advanced Socket Usage
 
 ```python
 # Send packet and receive multiple responses
 responses = sock.srp(
-    packet, 
-    timeout=5.0, 
-    count=5, 
+    packet,
+    timeout=5.0,
+    count=5,
     filter_str='arp and src host 192.168.1.1'
 )
 
@@ -614,6 +795,57 @@ packets = sock.recvl2(count=10, timeout=5.0)
 # Set filter to capture only ARP packets
 sock.set_filter('arp')
 packets = sock.recvl2(count=5)
+```
+
+---
+
+### L2Packet (Linux-only, AF_PACKET) — New in 0.0.3
+
+A lightweight alternative that uses the native Linux `AF_PACKET` socket. It is **faster** and has **lower overhead** than the libpcap-based `L2Socket` because it does not go through the pcap library.
+
+```python
+from LightPacket.platforms.linux.L2Packet import L2Packet
+
+# Create a raw AF_PACKET socket on the default interface
+sock = L2Packet(iface='eth0', nonstop=True, snaplen=65535)
+
+# Send a packet (auto-builds if a layer object is passed)
+sock.sendl2(packet)
+
+# Receive packets (returns a list of raw bytes)
+packets = sock.recvl2(count=5, timeout=2.0)
+
+# Set a BPF filter
+sock.set_filter('arp and host 192.168.1.1')
+
+# Close the socket
+sock.close()
+```
+
+**Parameters:**
+- `iface`: Network interface name (auto-detected if `None`)
+- `nonstop`: If `True`, the socket is blocking; if `False`, non-blocking (affects direct `.recv()` calls)
+- `snaplen`: Maximum number of bytes to capture per packet
+
+**Methods:**
+- `sendl2(packet)` – Send a packet (bytes or layer object)
+- `recvl2(count, timeout)` – Receive up to `count` packets (use `count=0` for unlimited) within `timeout` seconds
+- `set_filter(filter_str)` – Compile and attach a BPF filter (requires libpcap)
+- `close()` – Close the socket
+
+> **Note:** `L2Packet` is **Linux-only** and does not support `srp1`/`srp` out-of-the-box – you can implement your own request-response logic using `sendl2` and `recvl2` with a filter. If you need full send-and-receive semantics, use `L2Socket` instead.
+
+---
+
+## BPF Filter Compilation
+
+Both `L2Socket` and `L2Packet` support BPF filters via `set_filter()`. The library uses libpcap (or `tcpdump` fallback) to compile the filter string. You can also manually compile filters using `bpf.py`:
+
+```python
+from LightPacket.bpf import get_bpf_bytes
+
+# Get a raw BPF program (used internally)
+filter_bytes, bp = get_bpf_bytes('arp', 'eth0')
 ```
 
 ---
@@ -776,14 +1008,14 @@ route = get_best_route_bsd('8.8.8.8')
 ### EtherType Values
 
 ```python
-from LightPacket import ETHERTYPE, IPv4, ARP, IPv6, VLAN
+from LightPacket import ETHERTYPE, IPv4, IPv6, Q_IN_Q
 
 # Access dictionary
 print(ETHERTYPE[0x0800])  # (IPv4)
 
 # Use constants
 ethertype = IPv4  # 0x0800
-ethertype = ARP   # 0x0806
+ethertype = Q_IN_Q  # 0x0806
 ethertype = IPv6  # 0x86DD
 ```
 
@@ -816,7 +1048,7 @@ print(SAP_VALUES[0xAA])  # "SNAP (Subnetwork Access Protocol)"
 ### STP Constants
 
 ```python
-from LightPacket import STP
+from LightPacket.Stp import STP
 
 # STP BPDU types
 # 0x00 = Configuration BPDU
@@ -912,7 +1144,7 @@ packet.show()
 print(Ethernet())
 # <Ethernet dst=ff:ff:ff:ff:ff:ff src=aa:bb:cc:dd:ee:ff type=0x0806 (ARP) len=14 (bytes)>
 
-print(Arp())
+print(ARP())
 # <Arp opcode=1 plen=4 ptype=0x0800 maclen=6 hwtype=1 macsrc=aa:bb:cc:dd:ee:ff ipsrc=192.168.1.10 macdst=ff:ff:ff:ff:ff:ff ipdst=192.168.1.1>
 
 print(Raw(b'\x01\x02\x03'))
@@ -936,6 +1168,7 @@ from LightPacket.Logger.Errors import (
     InvalidIPAddressError,
     InvalidDataTypeError
 )
+from LightPacket import MacAddress
 
 try:
     mac = MacAddress('invalid_mac')
@@ -968,6 +1201,8 @@ logger.warning(
 - `E002`: Invalid Data Type
 - `E003`: Invalid Data Length
 - `E004`: Invalid IP Address
+- `E005`: NotFoundError
+- `E006`: CannotCompileBPF
 
 **Warning Codes:**
 - `W001`: Non-Hexadecimal Value
@@ -976,45 +1211,71 @@ logger.warning(
 
 ## Complete Usage Examples
 
-### ARP Scanner
+### ARP Scanner using `L2Socket`
 
 ```python
-from LightPacket import L2Socket, Ethernet, Arp
+from LightPacket import L2Socket
+from LightPacket.Arp import ARP
+from LightPacket.EthernetII import Ethernet
 import time
 
 def arp_scan(ip_range='192.168.1.1'):
     """Simple ARP scanner"""
     sock = L2Socket()
     responses = []
-    
+
     # Build base Ethernet/ARP request
     eth = Ethernet()
-    
+
     for ip in ip_range:
-        arp = Arp(
+        arp = ARP(
             opcode=1,  # request
             ipdst=ip
         )
         packet = eth / arp
-        
+
         # Send and wait for response
         response = sock.srp1(packet, timeout=1.0, filter_str='arp')
-        
+
         if response:
             # Parse response
             from LightPacket import DetectLayer
             parsed = DetectLayer().start(response)
             if parsed:
-                print(f"{ip} is at {parsed.payload.macsrc}")
-                responses.append((ip, parsed.payload.macsrc))
-        
+                print(f"{ip} is at {parsed[ARP].macsrc}")
+                responses.append((ip, parsed[ARP].macsrc))
+
         time.sleep(0.1)
-    
+
     sock.close()
     return responses
 
 # Run scan
 arp_scan(['192.168.1.1', '192.168.1.10', '192.168.1.254'])
+```
+
+### ARP Scanner using `L2Packet` (Linux)
+
+```python
+from LightPacket.platforms.linux.L2Packet import L2Packet
+from LightPacket import DetectLayer
+from LightPacket.Arp import ARP
+from LightPacket.EthernetII import Ethernet
+import time
+
+def arp_scan_linux(ip):
+    sock = L2Packet()
+    packet = (Ethernet() / ARP(ipdst=ip)).build()
+    sock.sendl2(packet)
+    # Wait for reply
+    time.sleep(0.5)
+    packets = sock.recvl2(count=1, timeout=1.0)
+    sock.close()
+    for raw in packets:
+        parsed = DetectLayer().start(raw)
+        if parsed and parsed[ARP].opcode == 2:
+            return parsed[ARP].macsrc
+    return None
 ```
 
 ### Packet Sniffer
@@ -1025,16 +1286,16 @@ from LightPacket import L2Socket, DetectLayer
 def sniff_packets(interface=None, count=10, filter_str=None):
     """Simple packet sniffer"""
     sock = L2Socket(iface=interface)
-    
+
     if filter_str:
         sock.set_filter(filter_str)
-    
+
     packets = sock.recvl2(count=count, timeout=5.0)
-    
+
     for raw_packet in packets:
         parsed = DetectLayer().start(raw_packet, verbose=True)
         print("-" * 60)
-    
+
     sock.close()
     return packets
 
@@ -1048,11 +1309,14 @@ sniff_packets(interface='eth0', count=10)
 ### STP Packet Generation
 
 ```python
-from LightPacket import Ethernet, LLC, STP, L2Socket
+from LightPacket import L2Socket
+from LightPacket.EthernetII import Ethernet
+from LightPacket.LLC import LLC
+from LightPacket.Stp import STP
 
 def send_stp_bpdu():
     """Send an STP configuration BPDU"""
-    
+
     # Build STP packet
     stp_packet = (
         Ethernet(
@@ -1075,12 +1339,12 @@ def send_stp_bpdu():
             forward_delay=3840
         )
     )
-    
+
     # Send packet
     sock = L2Socket()
     result = sock.sendl2(stp_packet)
     sock.close()
-    
+
     return result
 
 # Send STP BPDU
@@ -1090,7 +1354,9 @@ send_stp_bpdu()
 ### Custom Packet Sender
 
 ```python
-from LightPacket import L2Socket, Ethernet, Raw
+from LightPacket import L2Socket
+from LightPacket.EthernetII import Ethernet
+from LightPacket.Raw import Raw
 
 def send_custom_data(mac_dst, mac_src, data):
     """Send custom data packet"""
@@ -1101,11 +1367,11 @@ def send_custom_data(mac_dst, mac_src, data):
     )
     raw = Raw(data)
     packet = eth / raw
-    
+
     sock = L2Socket()
     result = sock.sendl2(packet)
     sock.close()
-    
+
     return result
 
 # Send custom data
@@ -1120,29 +1386,30 @@ send_custom_data(
 
 ```python
 from LightPacket import PcapRead, PcapWrite, DetectLayer
+from LightPacket.Arp import ARP
 
 def process_pcap(input_file, output_file, filter_type=None):
     """Read a PCAP file, parse packets, and write filtered packets"""
-    
+
     # Read packets from PCAP file
     packets = PcapRead(input_file)
     filtered_packets = []
-    
+
     for packet in packets:
         # Parse the packet
         parsed = DetectLayer().start(packet['data'])
-        
+
         # Filter packets (example: only ARP packets)
-        if filter_type == 'arp' and hasattr(parsed, 'payload') and parsed.payload.__class__.__name__ == 'ArpLayer':
+        if filter_type == 'arp' and ARP in parsed:
             filtered_packets.append(packet['data'])
         elif filter_type is None:
             filtered_packets.append(packet['data'])
-    
+
     # Write filtered packets to new PCAP file
     if filtered_packets:
         PcapWrite(filtered_packets, output_file)
         print(f"Wrote {len(filtered_packets)} packets to {output_file}")
-    
+
     return filtered_packets
 
 # Extract all ARP packets from a capture file
@@ -1156,14 +1423,15 @@ arp_packets = process_pcap('capture.pcap', 'arp_only.pcap', filter_type='arp')
 ### Linux
 
 - Requires `libpcap-dev` package
-- Default interface is automatically detected
-- Uses `/sys/class/net/` for interface information
+- `L2Packet` provides native AF_PACKET support (new in 0.0.3)
+- Default interface is automatically detected using `/sys/class/net/` and `ip` commands
 - Supports both IPv4 and IPv6
 - Uses `ip` command for routing information
 
 ### Windows
 
 - Requires Npcap installation
+- Only `L2Socket` (Npcap) is available
 - Uses GUID-based interface names
 - Npcap device names format: `\Device\NPF_{GUID}`
 - Loopback interface: `\Device\NPF_Loopback`
@@ -1171,6 +1439,7 @@ arp_packets = process_pcap('capture.pcap', 'arp_only.pcap', filter_type='arp')
 
 ### macOS / BSD
 
+- Only `L2Socket` (libpcap) is available
 - Requires `libpcap` (bundled on macOS at `/usr/lib/libpcap.dylib`; install via package manager on FreeBSD/OpenBSD/NetBSD)
 - Interface enumeration uses `pcap_findalldevs()` with `ifconfig`/`route`/`netstat` fallbacks
 - Default interface detected via `route -n get default`
@@ -1184,9 +1453,8 @@ arp_packets = process_pcap('capture.pcap', 'arp_only.pcap', filter_type='arp')
 ```python
 from LightPacket import version, __version__
 
-print(f"LightPacket version: {version}")
-print(f"Package version: {__version__}")
-# Output: LightPacket version: 0.0.1-Gama
+print(f"LightPacket version: {version}")          # '0.0.3'
+print(f"Package version: {__version__}")          # '0.0.3'
 ```
 
 ---
@@ -1208,13 +1476,11 @@ LightPacket is released under the Mozilla Public License 2.0.
 
 ## Support
 
-- **Bug Reports**: [GitHub Issues](https://github.com/adamboulaaz92-jpg/LightPacket/issues)
-- **Source Code**: [GitHub Repository](https://github.com/adamboulaaz92-jpg/LightPacket)
+- **Bug Reports**: [GitHub Issues](https://github.com/Light-Projects/LightPacket/issues)
+- **Source Code**: [GitHub Repository](https://github.com/Light-Projects/LightPacket)
 
 ---
 
 ## Author
 
 - **Adam Boulaaz** - *Initial work* - [GitHub](https://github.com/adamboulaaz92-jpg)
-
----
