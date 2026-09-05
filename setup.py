@@ -3,13 +3,17 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 from setuptools import setup, find_packages
+from pathlib import Path
+
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
 
 setup(
     name="LightPacket",
-    version="0.0.1",
+    version="0.0.3",
     packages=find_packages(),  
     package_data={
-        'LightPacket': ['lib/libpcap_writer.so','lib/libpcap_reader.so'],
+        'LightPacket': ['lib/*.so', 'lib/*.dll', 'lib/*.dylib'],
     },
     include_package_data=True,
     install_requires=[],
@@ -20,7 +24,7 @@ setup(
     classifiers=[
         "License :: OSI Approved :: Mozilla Public License 2.0 (MPL-2.0)",
     ],
-    long_description="README.md",
+    long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/adamboulaaz92-jpg/LightPacket",
     project_urls={
