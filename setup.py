@@ -10,7 +10,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name="lightpacket",
-    version="0.0.3w",
+    version="0.0.3a",
     packages=find_packages(),  
     package_data={
         'LightPacket': ['lib/*.so', 'lib/*.dll', 'lib/*.dylib','data/*.txt','helper/protos/*.json'],
