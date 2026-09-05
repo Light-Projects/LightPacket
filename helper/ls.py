@@ -1,8 +1,12 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 import json
 import os
 from pathlib import Path
-from ..Decoration.Colors import GREEN, PURPLE, CYAN, RESET
-from ..Logger.LightLogger import Logger, ErrorCode
+from LightPacket.Decoration.Colors import GREEN, CYAN, RESET,PURPLE
+from LightPacket.Logger.LightLogger import ErrorCode, Logger
 
 logger = Logger()
 
@@ -23,6 +27,10 @@ def ls(proto = None):
     else:
         try:
             print()
+            if type(proto) == str:
+                pass
+            else:
+                proto = str(proto).replace("<","").replace(">","").replace("'","").replace("class","").strip().split(".")[2]
             with open(str(Path(__file__).parent) + f"/protos/{proto}.json", "r", encoding="utf-8") as f:
                 data = json.loads(f.read())
                 fields = data["Proto"]["Fields"]

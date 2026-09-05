@@ -5,6 +5,6 @@
     "Fields": [
       "dst           {48 bits}  = ff:ff:ff:ff:ff:ff ",
       "src           {48 bits}  = default-gateway ",
-      "lenght        {16 bits}  = auto-calculated"]
+      "length        {16 bits}  = auto-calculated"]
   }
 }
