@@ -9,7 +9,7 @@ this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 
 setup(
-    name="LightPacket",
+    name="lightpacket",
     version="0.0.3",
     packages=find_packages(),  
     package_data={
