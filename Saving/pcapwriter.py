@@ -5,7 +5,11 @@
 import ctypes
 import os
 import sys
-import struct
+
+PCAP_LINKTYPE_ETHERNET = 1
+PCAP_LINKTYPE_PPP = 9
+PCAP_LINKTYPE_IEEE802_11 = 105
+PCAP_LINKTYPE_RAW = 101
 
 current_dir = os.path.dirname(os.path.abspath(__file__)).replace("Saving","lib")
 
@@ -27,7 +31,8 @@ class PcapPacketData(ctypes.Structure):
 lib.create_pcap_file.argtypes = [
     ctypes.c_char_p,           
     ctypes.POINTER(PcapPacketData),  
-    ctypes.c_int              
+    ctypes.c_int,
+    ctypes.c_int
 ]
 lib.create_pcap_file.restype = ctypes.c_int
 
@@ -36,7 +41,7 @@ def create_pcap(Data):
         pass
     else:
         Data = [Data]
-    
+
     packet_array = (PcapPacketData * len(Data))()
     
     for i, data in enumerate(Data):
@@ -45,7 +50,7 @@ def create_pcap(Data):
     
     return packet_array, len(Data)
 
-def PcapWrite(packets,filename):
+def PcapWrite(packets,filename,linktype=PCAP_LINKTYPE_ETHERNET):
     packetarr, totalpackets = create_pcap(packets)
-    result = lib.create_pcap_file(filename.encode(),packetarr,totalpackets)
+    result = lib.create_pcap_file(filename.encode(),packetarr,totalpackets,linktype)
     return result
