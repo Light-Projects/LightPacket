@@ -13,7 +13,7 @@ setup(
     version="0.0.3",
     packages=find_packages(),  
     package_data={
-        'LightPacket': ['lib/*.so', 'lib/*.dll', 'lib/*.dylib'],
+        'LightPacket': ['lib/*.so', 'lib/*.dll', 'lib/*.dylib','data/*.txt','helper/protos/*.json'],
     },
     include_package_data=True,
     install_requires=[],
