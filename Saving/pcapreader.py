@@ -12,7 +12,7 @@ if sys.platform == "linux":
     lib = ctypes.CDLL(f"{current_dir}/libpcap_reader.so")
 elif sys.platform == "win32":
     lib = ctypes.CDLL(f"{current_dir}/libpcap_reader.dll")
-elif sys,platform == "darwin":
+elif sys.platform == "darwin":
     lib = ctypes.CDLL(f"{current_dir}/libpcap_reader.dylib")
 else:
     lib = ctypes.CDLL(f"{current_dir}/libpcap_reader.so")
@@ -65,6 +65,57 @@ lib.print_packet_info.argtypes = [ctypes.POINTER(PcapResult)]
 lib.print_packet_info.restype = None
 
 
+class PcapReadStream:
+    def __init__(self, filename):
+        self.filename = filename
+        self.header = None
+        self.packets = []
+        self._result = None
+
+    def open(self):
+        self._result = lib.read_pcap_file(self.filename.encode("utf-8"))
+        if not self._result.packets or self._result.count == 0:
+            return self
+
+        self.header = [{
+            'magic': hex(self._result.global_header.magic_number),
+            'version_major': self._result.global_header.version_major,
+            'version_minor': self._result.global_header.version_minor,
+            'thiszone': self._result.global_header.thiszone,
+            'sigfigs': self._result.global_header.sigfigs,
+            'snaplen': self._result.global_header.snaplen,
+            'network': self._result.global_header.network,
+        }]
+
+        for i in range(self._result.count):
+            entry = self._result.packets[i]
+            raw = ctypes.string_at(entry.data, entry.header.incl_len)
+            self.packets.append({
+                "ts_sec": entry.header.ts_sec,
+                "ts_usec": entry.header.ts_usec,
+                "incl_len": entry.header.incl_len,
+                "orig_len": entry.header.orig_len,
+                "data": raw,
+            })
+        return self
+
+    def close(self):
+        if self._result is not None:
+            lib.free_pcap_result(ctypes.byref(self._result))
+            self._result = None
+
+    def __enter__(self):
+        return self.open()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
+
+    def __getitem__(self, idx):
+        if idx == 0:
+            return self.header
+        return self.packets
+
 def PcapRead(filename):
     result = lib.read_pcap_file(filename.encode("utf-8"))
 
@@ -72,6 +123,15 @@ def PcapRead(filename):
         return []
 
     packets = []
+    header = [{
+        'magic': hex(result.global_header.magic_number),
+        'version_major':result.global_header.version_major,
+        'version_minor':result.global_header.version_minor,
+        'thiszone':result.global_header.thiszone,
+        'sigfigs':result.global_header.sigfigs,
+        'snaplen':result.global_header.snaplen,
+        'network':result.global_header.network,
+    }]
     for i in range(result.count):
         entry = result.packets[i]
         raw = ctypes.string_at(entry.data, entry.header.incl_len)
@@ -80,10 +140,10 @@ def PcapRead(filename):
             "ts_usec": entry.header.ts_usec,
             "incl_len": entry.header.incl_len,
             "orig_len": entry.header.orig_len,
-            "data": raw, 
+            "data": raw,
         })
 
     lib.free_pcap_result(ctypes.byref(result))
-    return packets
+    return header,packets
 
 

@@ -50,6 +50,62 @@ def create_pcap(Data):
     
     return packet_array, len(Data)
 
+class PcapWriteStream:
+    def __init__(self, filename, linktype=PCAP_LINKTYPE_ETHERNET):
+        if linktype is None:
+            raise ValueError(
+                "linktype is required — pass sock.datalink() "
+                "so the file declares the correct link-layer type"
+            )
+
+        self.filename = filename
+        self.linktype = linktype
+        self._closed = False
+        self._packets_written = 0
+
+    def write(self, packets):
+        if self._closed:
+            raise RuntimeError("PcapWrite is closed")
+
+        if not packets:
+            return True
+
+        packetarr, totalpackets = create_pcap(packets)
+        rc = lib.create_pcap_file(
+            self.filename.encode(),
+            packetarr,
+            totalpackets,
+            self.linktype,
+        )
+        if rc != 0:
+            raise IOError(f"Failed to write pcap: rc={rc}")
+
+        self._packets_written += totalpackets
+        return True
+
+    def write_one(self, packet):
+        """Convenience: write a single packet."""
+        return self.write([packet])
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
+
+    def close(self):
+        self._closed = True
+
+    def __len__(self):
+        return self._packets_written
+
+    def __repr__(self):
+        state = "closed" if self._closed else "open"
+        return (f"<PcapWrite file={self.filename!r} "
+                f"linktype={self.linktype} "
+                f"written={self._packets_written} {state}>")
+
 def PcapWrite(packets,filename,linktype=PCAP_LINKTYPE_ETHERNET):
     packetarr, totalpackets = create_pcap(packets)
     result = lib.create_pcap_file(filename.encode(),packetarr,totalpackets,linktype)
