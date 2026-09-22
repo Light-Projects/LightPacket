@@ -1,7 +1,7 @@
 # LightPacket - A Comprehensive Packet Manipulation Library
 
 [![License: MPL-2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.8+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Version 0.0.4](https://img.shields.io/badge/version-0.0.4-orange.svg)](https://github.com/adamboulaaz92-jpg/LightPacket)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS%20%7C%20BSD-lightgrey.svg)](https://github.com/adamboulaaz92-jpg/LightPacket)
 
