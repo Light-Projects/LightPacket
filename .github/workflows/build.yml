@@ -1,70 +1,167 @@
-name: Build and Publish LightPacket Wheel
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+name: Build & Test LightPacket
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
     tags:
-      - 'v*'   # run on version tags
+      - 'v*'
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
+  workflow_dispatch:          # allow manual triggering
+
+permissions:
+  contents: read
 
 jobs:
+  # ──────────────────────────────────────────────
+  # Build the native C libraries from source
+  # ──────────────────────────────────────────────
   build:
+    name: Build – ${{ matrix.os }} / Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.9", "3.10", "3.11"]
-    env:
-      CFLAGS: "-O2"
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
+        python-version: [ "3.9", "3.10", "3.11", "3.12" ]
+
     steps:
+      # ── Checkout ──────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          submodules: true
 
+      # ── Python ────────────────────────────────
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "pip"
 
-      - name: Install system build dependencies (Linux)
+      # ── System dependencies (Linux) ──────────
+      - name: Install system dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y build-essential libpcap-dev
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential libpcap-dev
 
-      - name: Install system build dependencies (macOS)
+      # ── System dependencies (macOS) ──────────
+      - name: Install system dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew update
           brew install libpcap
 
+      # ── System dependencies (Windows) ────────
+      # Windows runners have MSVC available via the VS shell.
+      # Npcap SDK is needed for pcap headers on Windows.
+      - name: Install system dependencies (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Download Npcap SDK for pcap headers
+          $sdkUrl = "https://npcap.com/dist/npcap-sdk-1.13.zip"
+          Invoke-WebRequest -Uri $sdkUrl -OutFile npcap-sdk.zip -UseBasicParsing
+          Expand-Archive npcap-sdk.zip -DestinationPath npcap-sdk
+          echo "NPCAP_SDK=${{ github.workspace }}/npcap-sdk" >> $env:GITHUB_ENV
+
+      # ── Compile C libraries (Linux / macOS) ──
+      - name: Compile C libraries (Unix)
+        if: runner.os != 'Windows'
+        working-directory: lib
+        run: |
+          set -e
+          CC="${CC:-gcc}"
+
+          echo "::group::Building libpcap_reader"
+          $CC -shared -fPIC -O2 -o libpcap_reader.so pcap_reader.c
+          echo "::endgroup::"
+
+          echo "::group::Building libpcap_writer"
+          $CC -shared -fPIC -O2 -o libpcap_writer.so pcap_writer.c
+          echo "::endgroup::"
+
+          echo "::group::Building libpcapng"
+          $CC -shared -fPIC -O2 -o libpcapng.so pcapng.c
+          echo "::endgroup::"
+
+          echo "::group::Building liblbn"
+          $CC -shared -fPIC -O2 -o liblbn.so lbn.c
+          echo "::endgroup::"
+
+          ls -lh *.so
+
+      # ── Compile C libraries (Windows) ────────
+      - name: Compile C libraries (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        working-directory: lib
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          cl /LD /O2 /Fe:pcap_reader.dll pcap_reader.c
+          cl /LD /O2 /Fe:pcap_writer.dll pcap_writer.c
+          cl /LD /O2 /Fe:pcapng.dll pcapng.c
+          cl /LD /O2 /Fe:lbn.dll lbn.c
+          dir *.dll
+
+      # ── Python build tools ───────────────────
       - name: Install Python build tools
         run: |
-          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install --upgrade pip setuptools wheel build pytest
 
+      # ── Build wheel ──────────────────────────
       - name: Build wheel
         run: |
-          python setup.py bdist_wheel
+          python -m build --wheel --outdir dist/
 
-      - name: Run test suite
+      # ── Install wheel ────────────────────────
+      - name: Install wheel (Unix)
+        if: runner.os != 'Windows'
         run: |
-          pip install ./dist/*.whl
-          pytest -q
+          pip install dist/*.whl
 
-      - name: Upload wheel artifact
+      - name: Install wheel (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $whl = Get-ChildItem dist/*.whl | Select-Object -First 1
+          pip install $whl.FullName
+
+      # ── Run tests ────────────────────────────
+      - name: Run tests
+        run: |
+          pytest tests/ -v --tb=short
+
+      # ── Upload artifact ──────────────────────
+      - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
-          name: lightpacket-wheel-${{ matrix.os }}-py${{ matrix.python-version }}
+          name: lightpacket-${{ matrix.os }}-py${{ matrix.python-version }}
           path: dist/*.whl
+          retention-days: 30
 
-      # Optional: publish to PyPI on tag pushes
+  # ──────────────────────────────────────────────
+  # Publish to PyPI (only on version tags)
+  # ──────────────────────────────────────────────
+  publish:
+    name: Publish to PyPI
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write            # needed for trusted publishing
+    environment:
+      name: pypi
+      url: https://pypi.org/p/lightpacket
+    steps:
+      - name: Download all wheels
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+
       - name: Publish to PyPI
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: dist
-          # PyPI token should be stored in the repository secret PYPI_API_TOKEN
-          # The secret is automatically used by the action.
+          packages-dir: dist/
