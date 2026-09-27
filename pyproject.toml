@@ -13,13 +13,6 @@ authors = [{name = "Adam Boulaaz", email = "adamboulaaz92@gmail.com"}]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
     "Operating System :: OS Independent",
 ]
 
-
-# Optional extras
-[project.optional-dependencies]
-dev = [
-    "pytest>=7"
-]
