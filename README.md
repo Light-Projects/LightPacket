@@ -669,5 +669,5 @@ LightPacket is released under the **Mozilla Public License 2.0 (MPL-2.0)**. See 
 ## Author & Community
 
 - **Author**: Adam Boulaaz ([@adamboulaaz92-jpg](https://github.com/adamboulaaz92-jpg))
-- **Repository**: [https://github.com/adamboulaaz92-jpg/LightPacket](https://github.com/Light-Projects/LightPacket)
+- **Repository**: [LightPacket](https://github.com/Light-Projects/LightPacket)
 - **Issues & Contributions**: Please submit bug reports and feature requests to the [GitHub Issue Tracker](https://github.com/Light-Projects/LightPacket/issues).
