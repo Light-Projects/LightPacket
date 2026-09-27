@@ -148,19 +148,22 @@ LightPacket/
 
 ### Prerequisites
 
+
 #### Linux (Debian / Ubuntu / Kali)
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential libpcap-dev
+sudo apt-get install build-essential libpcap-dev zlib1g
 ```
 
 #### macOS
 ```bash
 brew install libpcap
+brew install zlib
 ```
 
 #### Windows
 - Install [Npcap](https://npcap.com/) (select **"Install Npcap in WinPcap API-compatible Mode"**).
+- Install [Zlib](https://zlib.net/)
 - Ensure Python 3.8+ is installed.
 
 ---
@@ -181,7 +184,7 @@ cd LightPacket
 gcc ./lib/pcap_reader.c -o ./lib/libpcap_reader.so -Wall -O2 -shared -fPIC
 gcc ./lib/pcap_writer.c -o ./lib/libpcap_writer.so -Wall -O2 -shared -fPIC
 gcc ./lib/pcapng.c      -o ./lib/libpcapng.so      -Wall -O2 -shared -fPIC
-gcc ./lib/lbn.c         -o ./lib/liblbn.so         -Wall -O2 -shared -fPIC
+gcc ./lib/lbn.c         -o ./lib/liblbn.so         -Wall -O2 -shared -fPIC -lz
 
 # Install package
 python setup.py install
