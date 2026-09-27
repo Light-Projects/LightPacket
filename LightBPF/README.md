@@ -1,5 +1,5 @@
 
-![](images/LightBPF.svg)
+![](../images/LightBPF.svg)
 
 # LightBPF: Pure-Python Berkeley Packet Filter (cBPF) Engine
 
