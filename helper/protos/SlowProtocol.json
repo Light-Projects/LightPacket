@@ -1,0 +1,9 @@
+{
+  "Proto": {
+    "Name": "SlowProtocol",
+    "Description": "Base header for Slow Protocols (IEEE 802.3 Clause 43). The 1-byte subtype field selects which slow protocol follows.",
+    "Fields": [
+      "subtype         {8 bits} = 0x01"
+    ]
+  }
+}
