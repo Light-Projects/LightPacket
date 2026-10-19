@@ -1,9 +1,9 @@
 .idea/
 
-images/
 LightPacket.egg-info/
 .venv/
 venv/
+.github/
 
 LightPacket.egg-info-PKG-INFO
 

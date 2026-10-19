@@ -11,7 +11,7 @@ Build, parse, sniff, and save network traffic — from raw Ethernet frames up th
 
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
-[![Version 1.0.0](https://img.shields.io/badge/version-1.0.0-orange.svg)](https://github.com/Light-Projects/LightPacket)
+[![Version 1.0.1](https://img.shields.io/badge/version-1.0.1-orange.svg)](https://github.com/Light-Projects/LightPacket)
 [![Platform](https://img.shields.io/badge/platform-linux%20%7C%20windows%20%7C%20macos-lightgrey.svg)](#installation)[![Open Source](https://img.shields.io/badge/Open%20Source-❤️-green)](https://opensource.org/)
 [![OSI Approved](https://img.shields.io/badge/OSI-Approved-3c9f3c?logo=opensourceinitiative)](https://opensource.org/licenses/gpl-2.0.php)
 
@@ -43,7 +43,7 @@ Designed for network engineers, security researchers, and systems developers, Li
 
 ---
 
-## Architecture Overview (1.0.0)
+## Architecture Overview (1.0.1)
 
 ```
 LightPacket/
@@ -74,10 +74,7 @@ LightPacket/
 ├── bpf.py                        # libpcap C BPF compilation wrapper
 │
 ├── LightBPF/                     # Pure-Python cBPF Engine 
-│   ├── Lexer.py                  # Tokenizer with operator normalization
-│   ├── Parser.py                 # Recursive-descent AST parser
-│   ├── Compiler.py               # cBPF bytecode compiler, backpatcher & emulator
-│   └── README.md                 # Complete LightBPF architectural documentation
+│   └── **
 │
 ├── platforms/                    # OS-specific low-level implementations
 │   └── linux/
@@ -98,6 +95,7 @@ LightPacket/
 │   ├── CIDR.py                   # IP & network address range validator
 │   ├── Checksum.py               # One's complement internet checksum
 │   ├── FCS.py                    # Frame Check Sequence & CRC32
+│   ├── fragmentation.py          # Fragmentation for IPv4/IPv6 Packets
 │   ├── VlanUtils.py              # VLAN stack depth & stripping utilities
 │   └── Nsec/
 │       └── arp_resolution.py     # High-speed parallel ARP scanner
@@ -639,7 +637,7 @@ def syn_scan(target_ip, ports, interface="eth0"):
 ```python
 import LightPacket
 
-print(f"LightPacket Version: {LightPacket.__version__}")  # '1.0.0'
+print(f"LightPacket Version: {LightPacket.__version__}")  # '1.0.1'
 ```
 
 ---
