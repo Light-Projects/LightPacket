@@ -41,94 +41,6 @@ Designed for network engineers, security researchers, and systems developers, Li
 
 ---
 
----
-
-## Architecture Overview (1.0.1)
-
-```
-LightPacket/
-├── __init__.py                   # Package entry point (platform dispatcher)
-├── BaseLayer.py                  # Abstract base layer class & operator overloading
-├── l2.py                         # Layer 2 protocol exports
-├── l3.py                         # Layer 3 & 4 protocol exports
-├── Detect_layer.py               # Dynamic protocol detector & auto-dissector
-├── Sniffer.py                    # Live packet sniffer and streaming loop
-├── Consts.py                     # Protocol constants, EtherTypes, and SAP values
-├── Version.py                    # Version metadata 
-├── Hex.py                        # Hexdump formatting utility
-│
-├── EthernetII.py                 # Ethernet II & Loopback frames
-├── Dot3.py                       # IEEE 802.3 Dot3 frames
-├── LLC.py                        # Logical Link Control (802.2)
-├── Snap.py                       # Subnetwork Access Protocol (SNAP)
-├── Vlan.py                       # 802.1Q & 802.1ad (QinQ) tagged frames
-├── Arp.py                        # Address Resolution Protocol (ARP)
-├── Stp.py                        # Spanning Tree Protocol (STP / RSTP)
-├── ppp.py                        # Point-to-Point Protocol (PPP, PPP2b, PPPoE)
-├── eapol.py                      # 802.1X EAPOL & EAP authentication methods
-├── ipv4.py                       # IPv4 header, IP options, & checksums
-├── ipv6.py                       # IPv6 header & extension header parser
-├── tcp.py                        # TCP header, flags, options, & checksums
-├── udp.py                        # UDP header & checksum calculation
-├── Raw.py                        # Raw binary payload wrapper
-├── bpf.py                        # libpcap C BPF compilation wrapper
-│
-├── LightBPF/                     # Pure-Python cBPF Engine 
-│   └── **
-│
-├── platforms/                    # OS-specific low-level implementations
-│   └── linux/
-│       ├── L2Packet.py           # Native zero-copy Linux AF_PACKET socket
-│       └── sll.py                # Linux Cooked Capture (SLLv1 & SLLv2)
-│
-├── Wireless/                     # Wireless protocols
-│   └── wlan.py                   # IEEE 802.11 Wi-Fi frames & Information Elements
-│
-├── Saving/                       # Multi-format packet capture I/O
-│   ├── pcapreader.py             # C-optimized classic PCAP reader
-│   ├── pcapwriter.py             # C-optimized classic PCAP writer
-│   ├── pcapng.py                 # PCAP Next Generation (PCAPNG) reader & writer
-│   └── lbn.py                    # LightBinary (LBN) high-speed format
-│
-├── utils/                        # Network & protocol utilities
-│   ├── replay.py                 # Capture replay engine (pcap, pcapng, lbn)
-│   ├── CIDR.py                   # IP & network address range validator
-│   ├── Checksum.py               # One's complement internet checksum
-│   ├── FCS.py                    # Frame Check Sequence & CRC32
-│   ├── fragmentation.py          # Fragmentation for IPv4/IPv6 Packets
-│   ├── VlanUtils.py              # VLAN stack depth & stripping utilities
-│   └── Nsec/
-│       └── arp_resolution.py     # High-speed parallel ARP scanner
-│
-├── lib/                          # Compiled native C shared libraries & sources
-│   ├── pcap_reader.c / .h        # Native PCAP reader C extension
-│   ├── pcap_writer.c / .h        # Native PCAP writer C extension
-│   ├── pcapng.c / .h             # Native PCAPNG C extension
-│   └── lbn.c / .h                # Native LightBinary C extension
-│
-├── helper/                       # Protocol helpers & metadata catalog
-│   ├── ls.py                     # Layer introspection & terminal inspector
-│   ├── network.py                # Network resolution utilities
-│   ├── ipv4/                     # IPv4 options & address converters
-│   ├── ipv6/                     # IPv6 extension header definitions
-│   ├── tcp/                      # TCP Options definitions
-│   └── protos/*.json             # JSON schema definitions for each layer
-│
-├── Interfaces/                   # Network interface enumeration
-│   ├── LinuxInterfaces.py        # Linux sysfs/netlink interface discovery
-│   ├── LibpcapInterfacesLin.py   # Linux libpcap
-│   ├── WinInterfaces.py          # Windows Npcap / adapter discovery
-│   ├── NpcapInterfacesWin.py     # Windows npcap
-│   ├── UnixInterfaces.py         # macOS / BSD libpcap interface discovery
-│   └── LibpcapInterfacesUnix.py  # General Unix libpcap
-│
-└── Logger/                       # Unified logging & exception subsystem
-    ├── LightLogger.py            # ANSI-color terminal logger
-    └── Errors.py                 # Standardized LightPacket exception hierarchy
-```
-
----
-
 ## Installation
 
 ### Prerequisites
@@ -184,7 +96,7 @@ from LightPacket.l3 import IPv4, TCP
 from LightPacket.Raw import Raw
 
 # Craft an Ethernet / IPv4 / TCP packet with payload:
-packet = Ethernet(dst="aa:bb:cc:dd:ee:ff") / IPv4(dst="192.168.1.1") / TCP(dport=80, flags="S") / Raw(b"GET / HTTP/1.1\r\n\r\n")
+packet = Ethernet(dst="aa:bb:cc:dd:ee:ff") / IPv4(dst="192.168.1.1") / TCP(dport=80, flags=0x02) / Raw(b"GET / HTTP/1.1\r\n\r\n")
 
 # Serialize to raw wire bytes:
 wire_bytes = packet.build()
@@ -216,7 +128,7 @@ from LightPacket.ipv4 import IPv4
 vlan_pkt = Ethernet() / VLAN(vlan_id=100, priority=3) / IPv4(dst="10.0.0.1")
 
 # QinQ (Stacked VLANs):
-qinq_pkt = Ethernet() / VLAN(vlan_id=10, ethertype=0x88A8) / VLAN(vlan_id=20) / IPv4()
+qinq_pkt = Ethernet() / VLAN(vlan_id=10) / VLAN(vlan_id=20) / IPv4()
 ```
 
 #### Address Resolution Protocol (`Arp.py`)
@@ -244,10 +156,10 @@ stp_pkt = LLC(dsap=0x42, ssap=0x42) / STP(root_priority=0x8000, root_mac="00:11:
 from LightPacket.eapol import EAPOL, EAP_IDENTITY, EAP_MD5, EAP_TLS
 
 # EAPOL Start:
-eapol_start = EAPOL(packet_type=1)
+eapol_start = EAPOL()
 
 # EAP Identity Response:
-eap_id = EAPOL(packet_type=0) / EAP_IDENTITY(eap_id=1, identity="alice@corp.net")
+eap_id = EAPOL() / EAP_IDENTITY(id=1, identity=b"alice@corp.net")
 ```
 
 #### Linux Cooked Capture (`platforms.linux.sll`)
@@ -279,12 +191,13 @@ ip = IPv4(
 ```python
 from LightPacket.ipv6 import IPv6
 from LightPacket.helper.ipv6.IPv6ExtHeader import IPv6ExtHeader
+from LightPacket.tcp import TCP
 
 # Base IPv6:
 ip6 = IPv6(src="2001:db8::1", dst="2001:db8::2", hop_limit=64)
 
 # Chained Extension Headers:
-ip6_ext = IPv6(dst="2001:db8::2") / IPv6ExtHeader(next_header=6, ext_type=44) / TCP(dport=80)
+ip6_ext = IPv6(dst="2001:db8::2") / IPv6ExtHeader(next_header=6,data=8*b'\x01',type=44) / TCP(dport=80)
 ```
 
 #### Transmission Control Protocol (`tcp.py`)
@@ -292,10 +205,10 @@ ip6_ext = IPv6(dst="2001:db8::2") / IPv6ExtHeader(next_header=6, ext_type=44) / 
 from LightPacket.tcp import TCP
 
 # TCP SYN packet:
-tcp_syn = TCP(sport=43210, dport=443, flags="S", seq=1000, window=65535)
+tcp_syn = TCP(sport=43210, dport=443, flags=0x02, seq=1000, window=65535)
 
 # TCP ACK packet:
-tcp_ack = TCP(sport=43210, dport=443, flags="A", seq=1001, ack=5001)
+tcp_ack = TCP(sport=43210, dport=443, flags=0x10, seq=1001, ack=5001)
 ```
 
 #### User Datagram Protocol (`udp.py`)
@@ -304,7 +217,7 @@ from LightPacket.udp import UDP
 from LightPacket.Raw import Raw
 
 # DNS query over UDP:
-udp_pkt = UDP(sport=5353, dport=53) / Raw(b"\x12\x34\x01\x00\x00\x01...")
+udp_pkt = UDP(sport=5353, dport=53) / Raw(b"\x12\x34\x01\x00\x00\x01")
 ```
 
 ---
@@ -314,15 +227,48 @@ udp_pkt = UDP(sport=5353, dport=53) / Raw(b"\x12\x34\x01\x00\x00\x01...")
 Craft and parse 802.11 Wi-Fi frames directly:
 
 ```python
-from LightPacket.Wireless.wlan import WiFi, Beacon, Element
-
-# Wi-Fi Beacon Frame:
-beacon = (
-    WiFi(type=0, subtype=8, addr1="ff:ff:ff:ff:ff:ff", addr2="00:11:22:33:44:55", addr3="00:11:22:33:44:55") /
-    Beacon(interval=100, capabilities=0x0411) /
-    Element(id=0, info=b"Corporate-WiFi") /
-    Element(id=1, info=b"\x82\x84\x8b\x96") /
-    Element(id=3, info=b"\x06")   # Channel 6
+from LightPacket.l2 import WiFi,Beacon,Element
+from LightPacket import GetMac,MacAddress
+p = WiFi(
+    subtype=8,
+    duration=0x0000,
+    addr1=b'\xff\xff\xff\xff\xff\xff',
+    addr2=bytes(MacAddress(GetMac.GetMac())),
+    addr3=bytes(MacAddress(GetMac.GetMac())),
+    seq_control=0x0000,
+) / Beacon(
+    timestamp=0,
+    beacon_interval=100,
+    capability=0,
+) / Element(
+    ie_id=0,
+    data=b'Light-AP'
+) / Element(
+    ie_id=45,
+    data=b'n\x00\x17\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+) / Element(
+    ie_id=3,
+    data=b'\x06'
+) / Element(
+    ie_id=1,
+    data=b'\x82\x84\x86\x88\x96'
+) / Element(
+    ie_id=48,
+    data=b'\x01\x00\x00\x0f\xac\x04\x01\x00\x00\x0f\xac\x04\x01\x00\x00\x0f\xac\x02\x00\x00'
+) / Element(
+    ie_id=61,
+    data=b'\x06\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff'
+) / Element(
+    ie_id=221,
+    oui=b'\xD8\x93\x33',
+    ouitype=1,
+    data=b'Light-Cloud'
+) / Element(
+    ie_id=114,
+    data=b'Light-Mesh'
+) / Element(
+    ie_id=107,
+    data=b'\x00\x00'
 )
 ```
 
@@ -337,7 +283,7 @@ beacon = (
 ```python
 from LightPacket import DetectLayer
 
-raw_bytes = b"\x00\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa\xbb\x08\x00\x45\x00..."
+raw_bytes = b"\x00\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa\xbb\x08\x00\x45\x00"
 parsed_pkt = DetectLayer().start(raw_bytes)
 
 # Display colored visual representation:
@@ -370,10 +316,12 @@ ls()
 
 ## Pure-Python cBPF Engine (`LightBPF`)
 
-LightPacket 0.0.4 includes a built-in, pure-Python Berkeley Packet Filter engine that compiles pcap-filter expressions into classic BPF machine code with **zero dependencies**.
+LightPacket 1.0.1 includes a built-in, pure-Python Berkeley Packet Filter engine that compiles pcap-filter expressions into classic BPF machine code with **zero dependencies**.
 
 ```python
-from LightPacket.LightBPF.CompilerSet import BpfCompiler, BpfEmulator, disassemble
+from LightPacket.LightBPF.CompilerSet.Compiler import BpfCompiler
+from LightPacket.LightBPF.CompilerSet.Disassembler import disassemble
+from LightPacket.LightBPF.CompilerSet.Emulator import BpfEmulator
 
 # 1. Compile filter string into cBPF instructions
 insns = BpfCompiler.compile_str("tcp port 80 and src host 192.168.1.10")
@@ -382,7 +330,7 @@ insns = BpfCompiler.compile_str("tcp port 80 and src host 192.168.1.10")
 print(disassemble(insns))
 
 # 3. Test filter on raw packets offline (without root / libpcap)
-matched = BpfEmulator.execute(insns, raw_frame_bytes)
+matched = BpfEmulator.execute(insns, b'...')
 if matched > 0:
     print("Filter matched!")
 ```
@@ -391,13 +339,14 @@ if matched > 0:
 
 ```python
 import socket
-from LightPacket.LightBPF.CompilerSet import BpfCompiler
+from LightPacket.LightBPF.CompilerSet.Compiler import BpfCompiler
+from LightPacket.LightBPF.CompilerSet.Fprog import to_fprog
 
 sock = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(0x0003))
 sock.bind(("eth0", 0))
 
 # Compile and export to ctypes sock_fprog
-fprog = BpfCompiler.to_fprog(BpfCompiler.compile_str("tcp and not dst port 22"))
+fprog = to_fprog(BpfCompiler.compile_str("tcp and not dst port 22"))
 
 # Attach directly to the Linux kernel socket filter
 SO_ATTACH_FILTER = 26
@@ -463,7 +412,7 @@ Low-overhead, ultra-fast raw socket for Linux bypassing libpcap:
 from LightPacket.platforms.linux.L2Packet import L2Packet
 
 sock = L2Packet(iface="eth0")
-sock.sendl2(packet)
+sock.sendl2(b'...')
 
 # Receive up to 10 packets within 2.5 seconds:
 packets = sock.recvl2(count=10, timeout=2.5)
