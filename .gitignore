@@ -6,8 +6,8 @@ venv/
 .github/
 
 LightPacket.egg-info-PKG-INFO
-LightBPF/OLD/
-LightBPF/Fixes/
+LightBPF/OLD
+LightBPF/Fixes
 
 *.so
 lib/*.so
