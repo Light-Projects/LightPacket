@@ -3,15 +3,17 @@
 LightPacket.egg-info/
 .venv/
 venv/
-.github/
-lib/
+lib/*.so
+lib/*.dll
+lib/*.dylib
+lib/*.c
+lib/*.h
 
 LightPacket.egg-info-PKG-INFO
 LightBPF/OLD
 LightBPF/Fixes
 
 *.so
-lib/*.so
 
 # Byte-compiled / optimized / cache
 __pycache__/
