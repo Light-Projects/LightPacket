@@ -4,6 +4,7 @@ LightPacket.egg-info/
 .venv/
 venv/
 .github/
+lib/
 
 LightPacket.egg-info-PKG-INFO
 LightBPF/OLD
