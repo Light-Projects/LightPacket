@@ -33,18 +33,19 @@ class Ethernet(BaseLayer):
     def build(self) -> bytes:
         self.numofvlan = 0
         layer = self.payload.__class__.__name__
-        if self.ethertype is None:
-            if layer == 'VLAN':
-                self.numofvlan, layer = self.vlanhandler()
-                self.ethertype = self.check_layers_fromvar(layer)
-            else:
-                self.ethertype =  self.check_layers_fromvar(layer)
-        else:
-            pass
+        if layer == 'VLAN':
+            self.numofvlan, inner_layer = self.vlanhandler()
+            if self.ethertype is None:
+                self.ethertype = self.check_layers_fromvar(inner_layer)
+        elif self.ethertype is None:
+            self.ethertype = self.check_layers_fromvar(layer)
 
         if self.ethertype < 0x0600:
-            LLogger.error(error_code=ErrorCode.INVALID_DATA_LENGTH,message="Ether Type Field should not be less then 0x0600")
+            LLogger.error(error_code=ErrorCode.INVALID_DATA_LENGTH,
+                          message="Ether Type Field should not be less then 0x0600")
         payload_bytes = self.get_payload_bytes()
+
+
         chunked = b''
         try:
             if self.numofvlan > 0:
@@ -132,11 +133,12 @@ ETHERTYPE_PPPOE_DISCOVERY = 0x8863
 ETHERTYPE_PPPOE_SESSION = 0x8864
 ETHERTYPE_PPP_2B = 0x880B
 ETHERTYPE_LOOPBACK = 0x9000
+ETHERTYPE_SLOW_PROTO = 0x8809
 
 class EthernetParser:
 
     @staticmethod
-    def load_as_ethernet_layer(raw_packet, Alr=0, verbose=False):
+    def load_as_ethernet_layer(raw_packet, Alr=0, verbose=False, p=False):
         if type(raw_packet) is not list:
             raw_packet = [raw_packet]
             if hasattr(raw_packet[0], 'build') and type(raw_packet[0]) is not bytes:
@@ -156,7 +158,8 @@ class EthernetParser:
 
         if raw_type <= ETHERTYPE_LEN_MAX:
             from LightPacket.Dot3 import Dot3Parser
-            return Dot3Parser.load_as_dot3_layer(raw_packet, verbose=verbose)
+            return Dot3Parser.load_as_dot3_layer(raw_packet, verbose=verbose, p=p)
+        v = 0
 
         vlan_layer = None
         if raw_type in (ETHERTYPE_VLAN, ETHERTYPE_QINQ):
@@ -171,14 +174,16 @@ class EthernetParser:
                 from LightPacket.Dot3 import Dot3Parser
                 return Dot3Parser.load_as_dot3_layer(raw_packet, verbose=verbose)
 
+            EthernetParser._print_verbose(mac_dst, mac_src, ethertype, len(header), len(payload) + len(header))
             vlan_layer = VLANParser.load_as_vlan_layer(
                 packet[12:14 + (num_tags * 4)], verbose=verbose
             )
+            v = 1
         else:
             ethertype = raw_type
             payload = packet[14:]
 
-        if verbose:
+        if verbose and v == 0:
             EthernetParser._print_verbose(mac_dst, mac_src, ethertype, len(header), len(payload) + len(header))
 
         ether = Ethernet(
@@ -190,7 +195,7 @@ class EthernetParser:
         should_parse_payload = len(payload) > 0 and payload != b'' and Alr != 1
         prelayer = None
         if should_parse_payload:
-            prelayer = EthernetParser._parse_payload(ethertype, payload, verbose)
+            prelayer = EthernetParser._parse_payload(ethertype, payload, verbose, p)
 
         return EthernetParser._assemble(ether, vlan_layer, prelayer)
 
@@ -229,7 +234,7 @@ class EthernetParser:
               f'{ETHERTYPE.get(ethertype, "Unknown")}{RESET}')
 
     @staticmethod
-    def _parse_payload(ethertype, payload, verbose):
+    def _parse_payload(ethertype, payload, verbose, p):
 
         custom = registry.get_parser('ethertype', ethertype)
         if custom:
@@ -249,18 +254,22 @@ class EthernetParser:
 
         if ethertype == ETHERTYPE_PPP_2B:
             from LightPacket.ppp import PPP2bParser
-            return PPP2bParser.load_as_ppp2b_layer(payload, Alr=0, verbose=verbose)
+            return PPP2bParser.load_as_ppp2b_layer(payload, Alr=0, verbose=verbose, p=p)
 
         if ethertype == ETHERTYPE_LOOPBACK:
             return LoopbackParser.load_as_loopback_layer(payload, verbose=verbose)
 
         if ethertype == IPv4_var:
             from LightPacket.ipv4 import IPv4Parser
-            return IPv4Parser.load_as_ip_layer(payload, verbose=verbose)
+            return IPv4Parser.load_as_ip_layer(payload, verbose=verbose, p=p)
 
         if ethertype == IPv6_var:
             from LightPacket.ipv6 import IPv6Parser
-            return IPv6Parser.load_as_ip_layer(payload, verbose=verbose)
+            return IPv6Parser.load_as_ip_layer(payload, verbose=verbose, p=p)
+
+        if ethertype == ETHERTYPE_SLOW_PROTO:
+            from LightPacket.SlowProtocol import SlowProtocolParser
+            return SlowProtocolParser.load_as_slowprotocol_layer(payload, verbose=verbose)
 
         from LightPacket.Raw import RawParser
         return RawParser.load_as_Raw_layer(payload, verbose=verbose)

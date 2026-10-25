@@ -14,11 +14,16 @@ SlowProtocol Layer Creation (class SlowProtocol)
 """
 
 class SlowProtocol(BaseLayer):
-    def __init__(self, subtype=0x01):
+    def __init__(self, subtype=None):
         super().__init__()
         self.subtype = subtype
 
     def build(self):
+        layer = self.payload.__class__.__name__
+        if self.subtype is None:
+            if layer == 'ESMC':
+                self.subtype = 0x0A
+
         return struct.pack("!B", self.subtype) + self.get_payload_bytes()
 
     def __len__(self):
@@ -62,7 +67,7 @@ class SlowProtocolParser:
 
         SSHEADER = raw_packet[0][:1]
 
-        subtype = struct.unpack('!B', SSHEADER)
+        subtype = struct.unpack('!B', SSHEADER)[0]
 
         payload = raw_packet[0][1:]
         Lenght = len(SSHEADER)
@@ -70,16 +75,18 @@ class SlowProtocolParser:
 
         if verbose:
             print(f"\n{BOLD}SLOW-PROTOCOL LAYER : {RESET}Len({PURPLE}{Lenght}{RESET}) Total Len({PURPLE}{Total}{RESET}) >")
-            print(f'   {BLUE}SUBTYPE:{CYAN} {hex(subtype)}{RESET}')
+            print(f'   {BLUE}SUBTYPE:{CYAN} {subtype}{RESET}')
 
         ss = SlowProtocol(
             subtype=subtype
         )
 
         if len(payload) > 0:
-            from LightPacket.Raw import RawParser
-            prelayer = RawParser.load_as_Raw_layer(payload,verbose=verbose)
+            if subtype == 10:
+                from LightPacket.esmc import ESMCParser
+                return ss / ESMCParser.load_as_esmc_layer(payload,verbose=verbose)
 
-            return ss / prelayer
+            from LightPacket.Raw import RawParser
+            return ss / RawParser.load_as_Raw_layer(payload,verbose=verbose)
         return ss
 

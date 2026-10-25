@@ -84,7 +84,7 @@ PPP Parser (separate from the builder)
 class PPPParser:
 
     @staticmethod
-    def load_as_ppp_layer(raw_packet,Alr=0,verbose=False):
+    def load_as_ppp_layer(raw_packet,Alr=0,verbose=False, p=False):
         if type(raw_packet) is not list:
             raw_packet = [raw_packet]
             if hasattr(raw_packet[0], 'build') and type(raw_packet[0]) is not bytes:
@@ -120,10 +120,10 @@ class PPPParser:
                 return llc /  custom['parser'](payload, verbose=verbose)
             elif proto == v4:
                 from LightPacket.ipv4 import IPv4Parser
-                return llc / IPv4Parser.load_as_ip_layer(payload, verbose=verbose)
+                return llc / IPv4Parser.load_as_ip_layer(payload, verbose=verbose, p=p)
             elif proto == v6:
                 from LightPacket.ipv6 import IPv6Parser
-                return llc / IPv6Parser.load_as_ip_layer(payload, verbose=verbose)
+                return llc / IPv6Parser.load_as_ip_layer(payload, verbose=verbose, p=p)
             elif proto == eap:
                 return llc / parse_eap_methods(payload, verbose=verbose)
             else:
@@ -188,7 +188,7 @@ PPP2b Parser (separate from the builder)
 class PPP2bParser:
 
     @staticmethod
-    def load_as_ppp2b_layer(raw_packet,Alr=0,verbose=False):
+    def load_as_ppp2b_layer(raw_packet,Alr=0,verbose=False, p=False):
         if type(raw_packet) is not list:
             raw_packet = [raw_packet]
             if hasattr(raw_packet[0], 'build') and type(raw_packet[0]) is not bytes:
@@ -220,10 +220,10 @@ class PPP2bParser:
                 return llc / custom['parser'](payload, verbose=verbose)
             elif proto[0] == v4:
                 from LightPacket.ipv4 import IPv4Parser
-                return llc / IPv4Parser.load_as_ip_layer(payload, verbose=verbose)
+                return llc / IPv4Parser.load_as_ip_layer(payload, verbose=verbose, p=p)
             elif proto[0] == v6:
                 from LightPacket.ipv6 import IPv6Parser
-                return llc / IPv6Parser.load_as_ip_layer(payload, verbose=verbose)
+                return llc / IPv6Parser.load_as_ip_layer(payload, verbose=verbose, p=p)
             elif proto[0] == eap:
                 return llc / parse_eap_methods(payload, verbose=verbose)
             else:

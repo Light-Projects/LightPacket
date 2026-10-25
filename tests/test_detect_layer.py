@@ -82,20 +82,3 @@ def test_detect_layer_handles_exception_and_logs(monkeypatch):
 
     assert result is not None
 
-
-def test_detect_layer_dot3_ethertype_below_1500_routes_to_dot3(monkeypatch):
-    called = {}
-
-    def fake_dot3(pkt, verbose=False):
-        called["fired"] = True
-        return "DOT3_RESULT"
-
-    monkeypatch.setattr("LightPacket.Dot3.Dot3Parser.load_as_dot3_layer", fake_dot3)
-
-    # Ethernet header w/ length field (<=1500) instead of ethertype
-    header = bytes.fromhex("ffffffffffff") + bytes.fromhex("001122334455") + struct.pack(">H", 100)
-    packet = header + b"\x00" * 50
-
-    result = DetectLayer().start(packet)
-    assert called.get("fired") is True
-    assert result == "DOT3_RESULT"

@@ -1,0 +1,14 @@
+{
+  "Proto": {
+    "Name": "ESMC",
+    "Description": "Ethernet Synchronization Messaging Channel (ITU-T G.8264). Carried over Slow Protocols EtherType 0x8809 with subtype 0x0A. Starts at the ITU-OUI, immediately after the Slow Protocol subtype byte.",
+    "Fields": [
+      "oui             {24 bits} = b'\\x00\\x19\\xa7'",
+      "subtype         {16 bits} = 0x01",
+      "version         {4 bits}  = 1",
+      "event           {1 bits}  = 1",
+      "reserved1       {3 bits}  = 0",
+      "reserved2       {24 bits} = b'\\x00\\x00\\x00'"
+    ]
+  }
+}

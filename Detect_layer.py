@@ -33,7 +33,7 @@ class DetectLayer:
 
     def start(
             self, packet, linktype=config.network.DEFAULT_LINKTYPE,
-              previous_layer=None, verbose=config.logging.VERBOSE
+              previous_layer=None, verbose=config.logging.VERBOSE, guess_data=False
     ):
 
         if hasattr(packet, 'build') and callable(packet.build):
@@ -47,16 +47,16 @@ class DetectLayer:
 
         try:
             if len(packet) >= 0:
-                return self._dispatch_by_linktype(packet, linktype, verbose)
+                return self._dispatch_by_linktype(packet, linktype, verbose, guess_data)
             elif is_ppp_frame(packet) or linktype == LINKTYPE_PPP:
-                return self._parse_ppp(packet, verbose)
+                return self._parse_ppp(packet, verbose, guess_data)
             else:
                 return self._parse_raw(packet, verbose)
         except Exception as e:
             from LightPacket.Raw import RawParser
             return RawParser.load_as_Raw_layer(packet,verbose=verbose)
 
-    def _dispatch_by_linktype(self, packet, linktype, verbose):
+    def _dispatch_by_linktype(self, packet, linktype, verbose, p):
         linktype_handlers = {
             LINKTYPE_PPP: self._parse_ppp,
             LINKTYPE_IEEE802_11: self._parse_wifi,
@@ -67,25 +67,25 @@ class DetectLayer:
 
         handler = linktype_handlers.get(linktype)
         if handler is not None:
-            return handler(packet, verbose)
+            return handler(packet, verbose ,p)
 
-        return self._dispatch_by_ethertype(packet, verbose)
+        return self._dispatch_by_ethertype(packet, verbose, p)
 
-    def _dispatch_by_ethertype(self, packet, verbose):
+    def _dispatch_by_ethertype(self, packet, verbose, p):
         eth_type = self._read_ethertype(packet, offset=12)
 
         if eth_type in (ETHERTYPE_VLAN, ETHERTYPE_QINQ):
-            return self._dispatch_vlan(packet, verbose)
+            return self._dispatch_vlan(packet, verbose, p)
 
         if eth_type >= ETHERTYPE_MIN:
-            return self._parse_ethernet(packet, verbose)
+            return self._parse_ethernet(packet, verbose, p)
 
         if eth_type <= ETHERTYPE_LEN_MAX:
-            return self._parse_dot3(packet, verbose)
+            return self._parse_dot3(packet, verbose, p)
 
         return self._parse_raw(packet, verbose)
 
-    def _dispatch_vlan(self, packet, verbose):
+    def _dispatch_vlan(self, packet, verbose, p):
         from LightPacket.Vlan import vlannum
 
         num_vlans = vlannum(packet[12:])
@@ -93,8 +93,8 @@ class DetectLayer:
         inner_ethertype = self._read_ethertype(packet, offset=inner_offset)
 
         if inner_ethertype >= ETHERTYPE_MIN:
-            return self._parse_ethernet(packet, verbose)
-        return self._parse_dot3(packet, verbose)
+            return self._parse_ethernet(packet, verbose, p)
+        return self._parse_dot3(packet, verbose, p)
 
     @staticmethod
     def _read_ethertype(packet, offset):
@@ -102,39 +102,39 @@ class DetectLayer:
         return struct.unpack('>H', raw)[0]
 
     @staticmethod
-    def _parse_ppp(packet, verbose):
+    def _parse_ppp(packet, verbose, p):
         from LightPacket.ppp import PPPParser
-        return PPPParser.load_as_ppp_layer(packet, verbose=verbose)
+        return PPPParser.load_as_ppp_layer(packet, verbose=verbose, p=p)
 
     @staticmethod
-    def _parse_wifi(packet, verbose):
+    def _parse_wifi(packet, verbose, p):
         from LightPacket.Wireless.wlan import WiFiParser
-        return WiFiParser.load_as_wifi_layer(packet, verbose=verbose)
+        return WiFiParser.load_as_wifi_layer(packet, verbose=verbose, p=p)
 
     @staticmethod
-    def _parse_sll1(packet, verbose):
+    def _parse_sll1(packet, verbose, p):
         from LightPacket.platforms.linux.sll import SLLv1Parser
-        return SLLv1Parser.load_as_sll1_layer(packet, verbose=verbose)
+        return SLLv1Parser.load_as_sll1_layer(packet, verbose=verbose, p=p)
 
     @staticmethod
-    def _parse_sll2(packet, verbose):
+    def _parse_sll2(packet, verbose, p):
         from LightPacket.platforms.linux.sll import SLLv2Parser
-        return SLLv2Parser.load_as_sll2_layer(packet, verbose=verbose)
+        return SLLv2Parser.load_as_sll2_layer(packet, verbose=verbose, p=p)
 
     @staticmethod
-    def _parse_ip(packet, verbose):
+    def _parse_ip(packet, verbose, p):
         from LightPacket.ipv4 import IPv4Parser
-        return IPv4Parser.load_as_ip_layer(packet, verbose=verbose)
+        return IPv4Parser.load_as_ip_layer(packet, verbose=verbose, p=p)
 
     @staticmethod
-    def _parse_ethernet(packet, verbose):
+    def _parse_ethernet(packet, verbose, p):
         from LightPacket.EthernetII import EthernetParser
-        return EthernetParser.load_as_ethernet_layer(packet, verbose=verbose)
+        return EthernetParser.load_as_ethernet_layer(packet, verbose=verbose, p=p)
 
     @staticmethod
-    def _parse_dot3(packet, verbose):
+    def _parse_dot3(packet, verbose, p):
         from LightPacket.Dot3 import Dot3Parser
-        return Dot3Parser.load_as_dot3_layer(packet, verbose=verbose)
+        return Dot3Parser.load_as_dot3_layer(packet, verbose=verbose, p=p)
 
     @staticmethod
     def _parse_raw(packet, verbose):

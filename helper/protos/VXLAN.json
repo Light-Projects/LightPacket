@@ -1,0 +1,12 @@
+{
+  "Proto": {
+    "Name": "VXLAN",
+    "Description": "Virtual eXtensible Local Area Network (RFC 7348). 8-byte header carried over UDP destination port 4789. Encapsulates an inner Ethernet frame for Layer 2 overlay over Layer 3 networks.",
+    "Fields": [
+      "flags           {8 bits}   = 0x08",
+      "reserved1       {24 bits}  = 0",
+      "vni             {24 bits}  = 0",
+      "reserved2       {8 bits}   = 0"
+    ]
+  }
+}

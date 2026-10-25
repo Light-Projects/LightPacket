@@ -336,7 +336,7 @@ class IPv4(BaseLayer):
 class IPv4Parser:
 
     @staticmethod
-    def load_as_ip_layer(raw_packet, verbose=False):
+    def load_as_ip_layer(raw_packet, verbose=False, p=False):
         if type(raw_packet) is not list:
             raw_packet = [raw_packet]
             if hasattr(raw_packet[0], 'build') and type(raw_packet[0]) is not bytes:
@@ -359,7 +359,7 @@ class IPv4Parser:
         if version != 4:
             if version == 6:
                 from LightPacket.ipv6 import IPv6Parser
-                IPv6Parser.load_as_ip_layer(raw_packet, verbose=verbose)
+                IPv6Parser.load_as_ip_layer(raw_packet, verbose=verbose, p=p)
                 return
             else:
                 LLogger.error(error_code=ErrorCode.INVALID_VESRION,
@@ -433,7 +433,7 @@ class IPv4Parser:
 
             if proto == 17:
                 from LightPacket.udp import UDPParser
-                return ip / UDPParser.load_as_udp_layer(payload, verbose=verbose)
+                return ip / UDPParser.load_as_udp_layer(payload, verbose=verbose, p=p)
 
             if proto == 6:
                 from LightPacket.tcp import TCPParser

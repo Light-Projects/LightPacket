@@ -5,7 +5,6 @@
 import sys
 
 def GetIPv4():
-    ip = None
     if sys.platform == "win32":
         from LightPacket.LightPacketWin import get_default_interface_ip_windows
         ip = get_default_interface_ip_windows()
@@ -21,7 +20,6 @@ def GetIPv4():
     return ip if ip else "0.0.0.0"
 
 def GetIPv4Gateway():
-    ip = None
     if sys.platform == "win32":
         from LightPacket.LightPacketWin import get_default_gateway_ipv4_windows
         ip = get_default_gateway_ipv4_windows()

@@ -148,7 +148,7 @@ class IPv6(BaseLayer):
 class IPv6Parser:
 
     @staticmethod
-    def load_as_ip_layer(raw_packet, verbose=False):
+    def load_as_ip_layer(raw_packet, verbose=False, p=False):
         if type(raw_packet) is not list:
             raw_packet = [raw_packet]
             if hasattr(raw_packet[0], 'build') and type(raw_packet[0]) is not bytes:
@@ -247,7 +247,7 @@ class IPv6Parser:
 
             if current_type == 17:
                 from LightPacket.udp import UDPParser
-                return result / UDPParser.load_as_udp_layer(payload, verbose=verbose)
+                return result / UDPParser.load_as_udp_layer(payload, verbose=verbose, p=p)
 
             if current_type == 6:
                 from LightPacket.tcp import TCPParser

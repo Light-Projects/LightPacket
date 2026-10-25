@@ -102,7 +102,7 @@ class UDP(BaseLayer):
 class UDPParser:
 
     @staticmethod
-    def load_as_udp_layer(raw_packet, Alr=0, verbose=False):
+    def load_as_udp_layer(raw_packet, Alr=0, verbose=False, p=False):
         if type(raw_packet) is not list:
             raw_packet = [raw_packet]
             if hasattr(raw_packet[0], 'build') and type(raw_packet[0]) is not bytes:
@@ -134,6 +134,10 @@ class UDPParser:
             print(f'   {BLUE}CHECKSUM:{CYAN} 0x{checksum:04x} {RESET}')
 
         if len(payload) > 0 and Alr != 1 and payload != b'':
+            if p is True:
+                if dport == 4789 or sport == 4789 and len(payload) > 8:
+                    from LightPacket.Vlan import VXLANParser
+                    return udp / VXLANParser.load_as_vxlan_layer(payload, verbose=verbose, p=p)
             from LightPacket.Raw import RawParser
             return udp / RawParser.load_as_Raw_layer(payload, verbose=verbose)
 

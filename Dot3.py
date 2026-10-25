@@ -98,7 +98,7 @@ Dot3 (802.3) Parser (separate from the builder)
 class Dot3Parser:
 
     @staticmethod
-    def load_as_dot3_layer(raw_packet,verbose=False):
+    def load_as_dot3_layer(raw_packet,verbose=False, p=False):
         if type(raw_packet) is not list:
             raw_packet = [raw_packet]
             if hasattr(raw_packet[0], 'build') and type(raw_packet[0]) is not bytes:
@@ -119,14 +119,14 @@ class Dot3Parser:
         Total = len(payload) + Length
 
         if length == 0x8100 or length == 0x88a8:
-            from .Vlan import vlannum, VLANParser
+            from LightPacket.Vlan import vlannum, VLANParser
             number = vlannum(raw_packet[0][12:])
             ethertype = raw_packet[0][12 + (4 * number):14 + (4 * number)]
             ethertype = struct.unpack('>H', ethertype)[0]
             payload = raw_packet[0][14 + (number * 4):]
             if ethertype > 0x05DC:
                 from LightPacket.EthernetII import EthernetParser
-                return EthernetParser.load_as_ethernet_layer(raw_packet, verbose=verbose)
+                return EthernetParser.load_as_ethernet_layer(raw_packet, verbose=verbose, p=p)
             else:
                 if verbose:
                     print(
@@ -147,7 +147,7 @@ class Dot3Parser:
                     if len(payload) >= 3:
                         try:
                             from LightPacket.LLC import LLCParser
-                            prelayer = LLCParser.load_as_llc_layer(payload, Alr=1, verbose=verbose)
+                            prelayer = LLCParser.load_as_llc_layer(payload, Alr=1, verbose=verbose, p=p)
                             return dot3 / vl / prelayer
                         except Exception:
                             from LightPacket.Raw import RawParser
@@ -159,7 +159,7 @@ class Dot3Parser:
 
         elif length > 0x05DC:
             from LightPacket.EthernetII import EthernetParser
-            return EthernetParser.load_as_ethernet_layer(raw_packet,verbose=verbose)
+            return EthernetParser.load_as_ethernet_layer(raw_packet,verbose=verbose, p=p)
         else:
             if verbose:
                 print(f"\n{BOLD}DOT3 (802.3) LAYER : {RESET}Len({PURPLE}{Length}{RESET}) Total Len({PURPLE}{Total}{RESET}) >")
@@ -177,7 +177,7 @@ class Dot3Parser:
                 if len(payload) >= 3:
                     try:
                         from .LLC import LLCParser
-                        prelayer = LLCParser.load_as_llc_layer(payload,Alr=1,verbose=verbose)
+                        prelayer = LLCParser.load_as_llc_layer(payload,Alr=1,verbose=verbose, p=p)
                         return dot3 / prelayer
                     except Exception:
                         from LightPacket.Raw import RawParser

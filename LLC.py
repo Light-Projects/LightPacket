@@ -81,7 +81,7 @@ LLC Parser (separate from the builder)
 class LLCParser:
 
     @staticmethod
-    def load_as_llc_layer(raw_packet,Alr=0,verbose=False):
+    def load_as_llc_layer(raw_packet,Alr=0,verbose=False, p=False):
         if type(raw_packet) is not list:
             raw_packet = [raw_packet]
             if hasattr(raw_packet[0], 'build') and type(raw_packet[0]) is not bytes:
@@ -123,7 +123,7 @@ class LLCParser:
                 if len(payload) >= 5:
                     try:
                         from .Snap import SNAPParser
-                        prelayer = SNAPParser.load_as_snap_layer(payload, Alr=1, verbose=verbose)
+                        prelayer = SNAPParser.load_as_snap_layer(payload, Alr=1, verbose=verbose, p=p)
                     except Exception:
                         from LightPacket.Raw import RawParser
                         prelayer = RawParser.load_as_Raw_layer(payload, verbose=verbose)
@@ -138,9 +138,8 @@ class LLCParser:
                     from LightPacket.Raw import RawParser
                     prelayer = RawParser.load_as_Raw_layer(payload, verbose=verbose)
             else:
-                from .Detect_layer import DetectLayer
-                d = DetectLayer()
-                prelayer = d.start(payload, previous_layer="LLC", verbose=verbose)
+                from LightPacket.Raw import RawParser
+                prelayer = RawParser.load_as_Raw_layer(payload, verbose=verbose)
 
             return llc / prelayer
         return llc

@@ -108,7 +108,7 @@ SNAP Parser (separate from the builder)
 class SNAPParser:
 
     @staticmethod
-    def load_as_snap_layer(raw_packet,Alr=0,verbose=False):
+    def load_as_snap_layer(raw_packet,Alr=0,verbose=False, p=False):
         if type(raw_packet) is not list:
             raw_packet = [raw_packet]
             if hasattr(raw_packet[0], 'build') and type(raw_packet[0]) is not bytes:
@@ -165,21 +165,21 @@ class SNAPParser:
             if pid == 0x880B:
                 try:
                     from LightPacket.ppp import PPP2bParser
-                    return snap / PPP2bParser.load_as_ppp2b_layer(payload, Alr=0, verbose=verbose)
+                    return snap / PPP2bParser.load_as_ppp2b_layer(payload, Alr=0, verbose=verbose, p=p)
                 except Exception:
                     pass
 
             if pid == IPv4_var and len(payload) >= 20:
                 try:
                     from LightPacket.ipv4 import IPv4Parser
-                    return snap / IPv4Parser.load_as_ip_layer(payload, verbose=verbose)
+                    return snap / IPv4Parser.load_as_ip_layer(payload, verbose=verbose, p=p)
                 except Exception:
                     pass
 
             if pid == IPv6_var and len(payload) >= 40:
                 try:
                     from LightPacket.ipv6 import IPv6Parser
-                    return snap / IPv6Parser.load_as_ip_layer(payload, verbose=verbose)
+                    return snap / IPv6Parser.load_as_ip_layer(payload, verbose=verbose, p=p)
                 except Exception:
                     pass
 

@@ -7,11 +7,11 @@
 
 **A lightweight packet manipulation & live-scanning framework for Python.**
 
-Build, parse, sniff, and save network traffic — from raw Ethernet frames up through IPv4/IPv6, ARP, VLAN, PPP/PPPoE, and 802.11 — with a Scapy-style `/` layering syntax and a native C backend for capture I/O.
+Build, parse, sniff, and save network traffic — from raw Ethernet frames up through IPv4/IPv6, ARP, VLAN, PPP/PPPoE, and 802.11 — with a Scapy-style `/` layering syntax and pure Python capture I/O (PCAP, PCAPNG, LBN).
 
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
-[![Version 1.0.1](https://img.shields.io/badge/version-1.0.1-orange.svg)](https://github.com/Light-Projects/LightPacket)
+[![Version 1.0.2](https://img.shields.io/badge/version-1.0.2-orange.svg)](https://github.com/Light-Projects/LightPacket)
 [![Platform](https://img.shields.io/badge/platform-linux%20%7C%20windows%20%7C%20macos-lightgrey.svg)](#installation)[![Open Source](https://img.shields.io/badge/Open%20Source-❤️-green)](https://opensource.org/)
 [![OSI Approved](https://img.shields.io/badge/OSI-Approved-3c9f3c?logo=opensourceinitiative)](https://opensource.org/licenses/gpl-2.0.php)
 
@@ -20,7 +20,7 @@ Build, parse, sniff, and save network traffic — from raw Ethernet frames up th
 
 ## Overview
 
-**LightPacket** is a high-performance, cross-platform packet manipulation, sniffing, and crafting library written in Python and C. It provides a complete toolkit for building, dissecting, inspecting, filtering, and transmitting network packets across Layers 2, 3, and 4.
+**LightPacket** is a high-performance, cross-platform packet manipulation, sniffing, and crafting library written in Python. It provides a complete toolkit for building, dissecting, inspecting, filtering, and transmitting network packets across Layers 2, 3, and 4.
 
 Designed for network engineers, security researchers, and systems developers, LightPacket seamlessly bridges native low-level socket performance (via Linux `AF_PACKET`, Npcap, and libpcap) with an expressive, pythonic API.
 
@@ -34,7 +34,7 @@ Designed for network engineers, security researchers, and systems developers, Li
 - **Pure-Python cBPF Engine (`LightBPF`)**: Complete built-in Berkeley Packet Filter compiler, lexer, parser, disassembler, and virtual machine emulator—zero external C dependencies required.
 - **Native High-Speed Sockets**: Choose between cross-platform `L2Socket` (libpcap/Npcap) and Linux-optimized `L2Packet` (zero-copy native `AF_PACKET`).
 - **Live Packet Sniffer (`Sniffer`)**: Thread-safe capture loop with Python iterator streaming (`s.stream()`), callbacks, packet limits, timeouts, and BPF filtering.
-- **Next-Gen Capture Formats**: Full C-accelerated reading and writing for classic **PCAP**, modern **PCAPNG**, and ultra-fast **LBN** (LightBinary) files.
+- **Next-Gen Capture Formats**: 100% pure-Python reading and writing for classic **PCAP**, modern **PCAPNG**, and ultra-fast **LBN** (LightBinary) files — zero C compilation or external shared libraries required.
 - **Packet Replay Engine (`replay`)**: Replay capture files across network interfaces with configurable pacing, loop counts, jitter, and interruption controls.
 - **Interface & Route Discovery**: Auto-detect default interfaces, MAC addresses, gateways, and subnet topologies across Linux, Windows, macOS, and BSD.
 - **Interactive Layer Inspection (`ls`)**: Inspect protocol fields, defaults, and data types dynamically in the terminal.
@@ -73,16 +73,10 @@ pip install lightpacket
 ```bash
 git clone https://github.com/adamboulaaz92-jpg/LightPacket.git
 cd LightPacket
-
-# Compile C acceleration libraries (Linux / macOS):
-gcc ./lib/pcap_reader.c -o ./lib/libpcap_reader.so -Wall -O2 -shared -fPIC
-gcc ./lib/pcap_writer.c -o ./lib/libpcap_writer.so -Wall -O2 -shared -fPIC
-gcc ./lib/pcapng.c      -o ./lib/libpcapng.so      -Wall -O2 -shared -fPIC
-gcc ./lib/lbn.c         -o ./lib/liblbn.so         -Wall -O2 -shared -fPIC
-
-# Install package
-python setup.py install
+pip install .
 ```
+
+> **Note**: Capture I/O formats (PCAP, PCAPNG, LBN) are fully implemented in pure Python with zero C compilation required. The package installs cleanly out-of-the-box on Linux, Windows, and macOS without requiring GCC or shared library builds.
 
 ---
 
@@ -423,48 +417,63 @@ sock.close()
 
 ## Packet Capture I/O & Replay
 
-### PCAP Files (`Saving.pcapwriter`, `Saving.pcapreader`)
+### PCAP Files (`lib.py_pcap_writer`, `lib.py_pcap_reader`)
+
+Pure-Python reading and writing of classic `.pcap` files (supporting microsecond, nanosecond, little-endian, and big-endian formats):
 
 ```python
-from LightPacket import PcapWrite, PcapRead
+from LightPacket import create_pcap_file, PcapReader, PyPcapngWriter, PyPcapngReader
 
 # Write captured frames:
-PcapWrite([pkt1.build(), pkt2.build()], "capture.pcap")
+create_pcap_file(packetarr=[b'.......',b'..........'], filename="capture.pcap",totalpackets=2)
 
-# Read frames:
-packets = PcapRead("capture.pcap")
+# Read frames (returns header and packet list):
+header, packets = PcapReader("capture.pcap")
+print(f"Network link type: {header[0]['network']}, Snaplen: {header[0]['snaplen']}")
 for p in packets:
-    print(p["ts_sec"], len(p["data"]))
+    print(f"Time: {p['ts_sec']}.{p['ts_usec']:06d}s, Length: {p['incl_len']} bytes")
+
+# Streaming write/read via context manager:
+with PyPcapngWriter("stream.pcap") as writer:
+    writer.write_one(b'.................')
+
+with PyPcapngReader("stream.pcap") as reader:
+    for p in reader.packets:
+        print(len(p["data"]))
 ```
 
-### PCAPNG Files (`Saving.pcapng`)
+### PCAPNG Files (`lib.py_pcapng`)
 
-C-accelerated reading and writing of modern `.pcapng` capture files:
+Pure-Python reading and writing of modern `.pcapng` capture files (supporting multiple interfaces, options, and 64-bit microsecond timestamps):
 
 ```python
-from LightPacket.Saving.pcapng import PcapngWriter, PcapngReader
+from LightPacket import PyPcapngWriter, PyPcapngReader
 
 # Write to PCAPNG:
-with PcapngWriter("session.pcapng") as writer:
+with PyPcapngWriter("session.pcapng") as writer:
     iface_id = writer.add_interface(name="eth0", link_type=1)
-    writer.write(packet_bytes, interface_id=iface_id)
+    writer.write_packet(interface_id=iface_id, ts_usecs=123456789, data=b'..................')
 
 # Read from PCAPNG:
-with PcapngReader("session.pcapng") as reader:
+with PyPcapngReader("session.pcapng") as reader:
+    print(f"Interfaces: {[iface.name for iface in reader.interfaces]}")
     for pkt in reader:
-        print(f"Timestamp: {pkt.timestamp_ns}ns, Len: {pkt.captured_len}")
+        print(f"Interface: {pkt.interface_id}, Timestamp: {pkt.timestamp_usecs}µs, Len: {pkt.captured_len}")
 ```
 
-### LBN High-Speed Format (`Saving.lbn`)
+### LBN High-Speed Format (`lib.py_lbn`)
+
+**Light Binary Notation (LBN)** is LightPacket's lightweight, self-contained binary packet format featuring CRC-32 header integrity checks and optional per-file zlib compression:
 
 ```python
-from LightPacket.Saving.lbn import LbnWrite, LbnRead
+from LightPacket import lbn_save,lbn_load
 
-# High-speed compressed storage:
-LbnWrite("traffic.lbn", packet_list, compress=1)
+# High-speed compressed storage (LBN 1.1 with zlib level 6 compression):
+lbn_save("traffic.lbn", [pkt1.build(), pkt2.build()], compress=1)
 
-# Read back:
-loaded_packets = LbnRead("traffic.lbn")
+# Read back byte-for-byte:
+loaded_packets = lbn_load("traffic.lbn")
+
 ```
 
 ### Packet Replay Engine (`utils.replay`)
@@ -581,12 +590,30 @@ def syn_scan(target_ip, ports, interface="eth0"):
 
 ---
 
+## Architecture & Capture I/O Migration
+
+### Pure-Python Capture Engine (`lib/` )
+
+To guarantee seamless installation across all platforms without requiring C compilers or manual `.so`/`.dll` builds, the capture file I/O layer has been completely implemented in 100% pure Python:
+
+| Format | Module | Description |
+|---|---|---|
+| **PCAP** | `LightPacket.lib.py_pcap_reader`<br>`LightPacket.lib.py_pcap_writer` | Full standard libpcap implementation. Supports microsecond (`0xA1B2C3D4`) and nanosecond (`0xA1B23C4D`) timestamps, host and opposite endianness with automatic byte swapping, and standard link types (`ETHERNET`, `PPP`, `RAW`, `IEEE802_11`). |
+| **PCAPNG** | `LightPacket.lib.py_pcapng` | Modern PCAP Next Generation format. Implements Section Header Blocks (SHB with 64-bit length), Interface Description Blocks (IDB with interface options and alignment), and Enhanced Packet Blocks (EPB with 64-bit microsecond timestamps and 4-byte padding). |
+| **LBN** | `LightPacket.lib.py_lbn`<br> | Light Binary Notation. High-speed, self-contained binary packet sequence storage featuring CRC-32 header integrity validation and optional per-file zlib compression (LBN 1.1 and 1.0 backward compatibility). |
+
+- **Zero-Dependency Installation**: No external shared library builds or C compiler prerequisites are required.
+- **Direct Python Execution**: File read and write operations run natively in pure Python without falling back to external C libraries.
+- **Full Test Suite & Backward Compatibility**: Maintains full interoperability with standard tools (Wireshark, tcpdump) and preserves complete mock compatibility for existing test suites.
+
+---
+
 ## Version Information
 
 ```python
 import LightPacket
 
-print(f"LightPacket Version: {LightPacket.__version__}")  # '1.0.1'
+print(f"LightPacket Version: {LightPacket.__version__}")  # '1.0.2'
 ```
 
 ---

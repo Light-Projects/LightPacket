@@ -1,0 +1,17 @@
+{
+  "Proto": {
+    "Name": "EQLTLV",
+    "Description": "Extended Quality Level TLV (ITU-T G.8264 Table 11-5). 20-byte fixed structure, sent immediately after the standard QL TLV in enhanced ESMC. Carries enhanced SSM code, SyncE clock identity, and cascade counts.",
+    "Fields": [
+      "type_               {8 bits}   = 0x02",
+      "length              {16 bits}  = 0x0014",
+      "enhanced_ssm_code   {8 bits}   = 0x00",
+      "clock_identity      {64 bits}  = b'\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00'",
+      "cl_mixed_chain      {1 bit}    = 0",
+      "cl_partial_chain    {1 bit}    = 0",
+      "cascaded_eEECs      {8 bits}   = 0",
+      "cascaded_EECs       {8 bits}   = 0",
+      "reserved            {40 bits}  = b'\\x00\\x00\\x00\\x00\\x00'"
+    ]
+  }
+}

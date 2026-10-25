@@ -124,7 +124,7 @@ class SLLv1(BaseLayer):
 
 class SLLv1Parser:
     @staticmethod
-    def load_as_sll1_layer(raw_packet, Alr=0, verbose=False):
+    def load_as_sll1_layer(raw_packet, Alr=0, verbose=False, p=False):
         if type(raw_packet) is not list:
             raw_packet = [raw_packet]
             if hasattr(raw_packet[0], 'build') and type(raw_packet[0]) is not bytes:
@@ -186,7 +186,7 @@ class SLLv1Parser:
 
             if proto == ETHERTYPE_PPP_2B:
                 from LightPacket.ppp import PPP2bParser
-                return sll / PPP2bParser.load_as_ppp2b_layer(payload, Alr=0, verbose=verbose)
+                return sll / PPP2bParser.load_as_ppp2b_layer(payload, Alr=0, verbose=verbose, p=p)
 
             if proto == ETHERTYPE_LOOPBACK:
                 from LightPacket.EthernetII import LoopbackParser
@@ -194,11 +194,11 @@ class SLLv1Parser:
 
             if proto == IPv4_var:
                 from LightPacket.ipv4 import IPv4Parser
-                return sll / IPv4Parser.load_as_ip_layer(payload, verbose=verbose)
+                return sll / IPv4Parser.load_as_ip_layer(payload, verbose=verbose, p=p)
 
             if proto == IPv6_var:
                 from LightPacket.ipv6 import IPv6Parser
-                return sll / IPv6Parser.load_as_ip_layer(payload, verbose=verbose)
+                return sll / IPv6Parser.load_as_ip_layer(payload, verbose=verbose, p=p)
 
             from LightPacket.Raw import RawParser
             return sll / RawParser.load_as_Raw_layer(payload, verbose=verbose)
@@ -297,7 +297,7 @@ class SLLv2(BaseLayer):
 class SLLv2Parser:
 
     @staticmethod
-    def load_as_sll2_layer(raw_packet, Alr=0, verbose=False):
+    def load_as_sll2_layer(raw_packet, Alr=0, verbose=False, p=False):
         if type(raw_packet) is not list:
             raw_packet = [raw_packet]
             if hasattr(raw_packet[0], 'build') and type(raw_packet[0]) is not bytes:
@@ -361,7 +361,7 @@ class SLLv2Parser:
 
             if proto == ETHERTYPE_PPP_2B:
                 from LightPacket.ppp import PPP2bParser
-                return sll / PPP2bParser.load_as_ppp2b_layer(payload, Alr=0, verbose=verbose)
+                return sll / PPP2bParser.load_as_ppp2b_layer(payload, Alr=0, verbose=verbose, p=p)
 
             if proto == ETHERTYPE_LOOPBACK:
                 from LightPacket.EthernetII import LoopbackParser
@@ -369,11 +369,11 @@ class SLLv2Parser:
 
             if proto == IPv4_var:
                 from LightPacket.ipv4 import IPv4Parser
-                return sll / IPv4Parser.load_as_ip_layer(payload, verbose=verbose)
+                return sll / IPv4Parser.load_as_ip_layer(payload, verbose=verbose, p=p)
 
             if proto == IPv6_var:
                 from LightPacket.ipv6 import IPv6Parser
-                return sll / IPv6Parser.load_as_ip_layer(payload, verbose=verbose)
+                return sll / IPv6Parser.load_as_ip_layer(payload, verbose=verbose, p=p)
 
             from LightPacket.Raw import RawParser
             return sll / RawParser.load_as_Raw_layer(payload, verbose=verbose)

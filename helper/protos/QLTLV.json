@@ -1,0 +1,12 @@
+{
+  "Proto": {
+    "Name": "QLTLV",
+    "Description": "Quality Level TLV (ITU-T G.8264). The first TLV in every ESMC PDU. Carries the 4-bit SSM quality code in the low nibble of the final byte; the high nibble is reserved.",
+    "Fields": [
+      "type_         {8 bits}   = 1",
+      "length        {16 bits}  = 4",
+      "unused        {4 bits}   = 0",
+      "ssmcode       {4 bits}   = 0"
+    ]
+  }
+}

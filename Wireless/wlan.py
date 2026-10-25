@@ -528,7 +528,7 @@ def get_data_link_type_name(dlt_type: int) -> str:
 class WiFiParser:
 
     @staticmethod
-    def load_as_wifi_layer(raw_packet, verbose=False):
+    def load_as_wifi_layer(raw_packet, verbose=False, p=False):
         from builtins import type
 
         if type(raw_packet) is not list:
@@ -640,7 +640,7 @@ class WiFiParser:
 
                     if has_data and not is_protected and len(extra) >= 3:
                         from LightPacket.LLC import LLCParser
-                        llc = LLCParser.load_as_llc_layer(extra, verbose=verbose)
+                        llc = LLCParser.load_as_llc_layer(extra, verbose=verbose, p=p)
                         if llc is not None:
                             return wifi / llc
                         from LightPacket.Raw import RawParser
