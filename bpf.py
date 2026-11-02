@@ -96,3 +96,17 @@ def get_bpf_bytes(filter_str, iface):
     insns_ptr = ctypes.cast(bp.bf_insns, ctypes.POINTER(bpf_insn))
     fp = sock_fprog(bp.bf_len, insns_ptr)
     return fp,bp
+
+def to_instructions(bp: bpf_program) -> list:
+    """Copy a libpcap bpf_program into LightBPF Instruction objects."""
+    from LightPacket.LightBPF.CompilerSet.Instruction import Instruction
+    ptr = ctypes.cast(bp.bf_insns, ctypes.POINTER(bpf_insn))
+    return [
+        Instruction(ptr[i].code, ptr[i].jt, ptr[i].jf, ptr[i].k)
+        for i in range(bp.bf_len)
+    ]
+
+
+def to_bytes(bp: bpf_program) -> bytes:
+    """Raw 8-bytes-per-insn bytecode, exactly as the kernel loads it."""
+    return ctypes.string_at(bp.bf_insns, bp.bf_len * 8)
