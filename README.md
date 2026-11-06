@@ -1,66 +1,48 @@
-
-
-<div align="center">
-
-![](images/LightPacket-Logo.png)
 # LightPacket
 
-**A lightweight packet manipulation & live-scanning framework for Python.**
+**A Python library
+for building, dissecting, capturing, and replaying network packets.**
 
-Build, parse, sniff, and save network traffic — from raw Ethernet frames up through IPv4/IPv6, ARP, VLAN, PPP/PPPoE, and 802.11 — with a Scapy-style `/` layering syntax and pure Python capture I/O (PCAP, PCAPNG, LBN).
+LightPacket brings packet crafting and network capture into one Python library. Its layered packet model covers traffic from Ethernet and VLAN through IPv4, IPv6, TCP, and UDP, as well as protocols such as ARP, PPPoE, and 802.11. Use it to inspect existing traffic, create packets for testing, capture traffic on a live interface, or work with packet-capture files, all through a consistent API.
 
-[![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
-[![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
-[![Version 1.0.2](https://img.shields.io/badge/version-1.0.2-orange.svg)](https://github.com/Light-Projects/LightPacket)
-[![Platform](https://img.shields.io/badge/platform-linux%20%7C%20windows%20%7C%20macos-lightgrey.svg)](#installation)[![Open Source](https://img.shields.io/badge/Open%20Source-❤️-green)](https://opensource.org/)
-[![OSI Approved](https://img.shields.io/badge/OSI-Approved-3c9f3c?logo=opensourceinitiative)](https://opensource.org/licenses/gpl-2.0.php)
+LightPacket is designed for network engineers, security researchers, developers, and students who need to work with packets directly from Python. It combines a Scapy-style layering syntax with a built-in packet dissector, a Python cBPF engine, and pure-Python PCAP and PCAPNG file handling.
 
-</div>
+## Why LightPacket?
 
+- **Build and inspect layered packets.** Compose protocol layers and parse raw frames into structured packet objects.
+- **Work with a broad range of protocols.** Supported layers span Ethernet, VLAN, ARP, IPv4, IPv6, TCP, UDP, PPP, and IEEE 802.11.
+- **Filter without an external BPF compiler.** The built-in LightBPF engine compiles and evaluates classic BPF filters in Python.
+- **Read and write capture files in Python.** PCAP and PCAPNG operations do not require a C compiler or native capture library.
+- **Choose a live-capture backend.** Use the cross-platform libpcap/Npcap-backed socket or Linux’s `AF_PACKET` socket, depending on your platform and needs.
+- **Capture and replay traffic.** Stream packets from an interface, apply filters, and replay saved captures with configurable timing.
 
-## Overview
+## Capabilities
 
-**LightPacket** is a high-performance, cross-platform packet manipulation, sniffing, and crafting library written in Python. It provides a complete toolkit for building, dissecting, inspecting, filtering, and transmitting network packets across Layers 2, 3, and 4.
+### Packet construction and dissection
 
-Designed for network engineers, security researchers, and systems developers, LightPacket seamlessly bridges native low-level socket performance (via Linux `AF_PACKET`, Npcap, and libpcap) with an expressive, pythonic API.
+Construct packets by stacking protocol layers with `/`, serialize them to wire-format bytes, and inspect incoming bytes with `DetectLayer`. Packet objects expose their layers and fields for further analysis or processing.
 
----
+### Protocol coverage
 
-### Key Features
+LightPacket supports common Layer 2, Layer 3, and Layer 4 protocols, including Ethernet II, VLAN and QinQ, ARP, LLC, STP, PPP, PPPoE, EAPOL, Linux cooked capture, IPv4, IPv6, TCP, and UDP. IEEE 802.11 layers are available for working with Wi-Fi frames.
 
-- **Multi-Layer Protocol Construction**: Craft and stack Ethernet, Dot3, VLAN (802.1Q & 802.1ad QinQ), ARP, LLC, SNAP, STP, PPP, PPPoE, EAPOL, SLLv1/SLLv2, IPv4, IPv6, TCP, UDP, Raw, and IEEE 802.11 Wi-Fi frames.
-- **Pythonic Packet Stacking**: Chain protocols intuitively using the division `/` operator (`Ethernet() / IPv4() / TCP()`).
-- **Automatic Protocol Dissection**: Instant parsing of raw wire bytes into structured, typed layer objects with `DetectLayer`.
-- **Pure-Python cBPF Engine (`LightBPF`)**: Complete built-in Berkeley Packet Filter compiler, lexer, parser, disassembler, and virtual machine emulator—zero external C dependencies required.
-- **Native High-Speed Sockets**: Choose between cross-platform `L2Socket` (libpcap/Npcap) and Linux-optimized `L2Packet` (zero-copy native `AF_PACKET`).
-- **Live Packet Sniffer (`Sniffer`)**: Thread-safe capture loop with Python iterator streaming (`s.stream()`), callbacks, packet limits, timeouts, and BPF filtering.
-- **Next-Gen Capture Formats**: 100% pure-Python reading and writing for classic **PCAP**, modern **PCAPNG**, and ultra-fast **LBN** (LightBinary) files — zero C compilation or external shared libraries required.
-- **Packet Replay Engine (`replay`)**: Replay capture files across network interfaces with configurable pacing, loop counts, jitter, and interruption controls.
-- **Interface & Route Discovery**: Auto-detect default interfaces, MAC addresses, gateways, and subnet topologies across Linux, Windows, macOS, and BSD.
-- **Interactive Layer Inspection (`ls`)**: Inspect protocol fields, defaults, and data types dynamically in the terminal.
+### Filtering
 
----
+LightBPF includes a pure-Python lexer, parser, compiler, disassembler, and virtual machine for classic Berkeley Packet Filter expressions. Filters can be compiled and evaluated offline, or attached to supported Linux sockets using `SO_ATTACH_FILTER`.
+
+### Live capture and sockets
+
+The high-level `Sniffer` supports streaming, callbacks, packet limits, timeouts, and filtering. For sending and receiving Layer 2 frames, LightPacket offers a libpcap/Npcap-backed `L2Socket` and a Linux-specific `AF_PACKET` implementation called `L2Packet`.
+
+Live capture has platform-specific system requirements. On Linux, raw packet access may require elevated privileges; on Windows, Npcap is required for the libpcap-compatible backend. See [Installation](#installation).
+
+### Capture files and replay
+
+The pure-Python capture-file modules support classic PCAP and PCAPNG reading and writing. The replay utility can send packets from PCAP, PCAPNG, and LBN files through a socket, with options for pacing, loops, and jitter.
 
 ## Installation
 
-### Prerequisites
-
-#### Linux (Debian / Ubuntu / Kali)
-```bash
-sudo apt-get update
-sudo apt-get install build-essential libpcap-dev
-```
-
-#### macOS
-```bash
-brew install libpcap
-```
-
-#### Windows
-- Install [Npcap](https://npcap.com/) (select **"Install Npcap in WinPcap API-compatible Mode"**).
-- Ensure Python 3.8+ is installed.
-
----
+LightPacket supports Python 3.8 and later.
 
 ### Install from PyPI
 
@@ -68,7 +50,7 @@ brew install libpcap
 pip install lightpacket
 ```
 
-### Install from Source
+### Install from source
 
 ```bash
 git clone https://github.com/Light-Projects/LightPacket.git
@@ -76,556 +58,57 @@ cd LightPacket
 pip install .
 ```
 
-> **Note**: Capture I/O formats (PCAP, PCAPNG, LBN) are fully implemented in pure Python with zero C compilation required. The package installs cleanly out-of-the-box on Linux, Windows, and macOS without requiring GCC or shared library builds.
+### Live-capture prerequisites
 
----
+Capture-file reading and writing are implemented in pure Python and do not require libpcap. Live capture uses native platform facilities:
 
-## Core Protocol Layers
+- **Linux:** The libpcap-backed socket requires libpcap. The Linux `L2Packet` backend uses `AF_PACKET`. Raw socket operations may require root or appropriate capabilities.
+- **macOS:** Install libpcap, for example with `brew install libpcap`.
+- **Windows:** Install [Npcap](https://npcap.com/) and select WinPcap API-compatible mode.
 
-All protocol layers inherit from `BaseLayer` and support chaining via the division `/` operator:
+## Quick start
 
-```python
-from LightPacket.l2 import Ethernet, ARP
-from LightPacket.l3 import IPv4, TCP
-from LightPacket.Raw import Raw
-
-# Craft an Ethernet / IPv4 / TCP packet with payload:
-packet = Ethernet(dst="aa:bb:cc:dd:ee:ff") / IPv4(dst="192.168.1.1") / TCP(dport=80, flags=0x02) / Raw(b"GET / HTTP/1.1\r\n\r\n")
-
-# Serialize to raw wire bytes:
-wire_bytes = packet.build()
-print(f"Total frame length: {len(wire_bytes)} bytes")
-```
-
----
-
-### Layer 2 Protocols (`LightPacket.l2`)
-
-#### Ethernet II (`EthernetII.py`)
-```python
-from LightPacket.EthernetII import Ethernet
-
-eth = Ethernet(
-    src="00:11:22:33:44:55",   # Defaults to local default interface MAC
-    dst="ff:ff:ff:ff:ff:ff",   # Defaults to broadcast
-    ethertype=0x0800           # Auto-inferred from next layer (e.g. 0x0800 for IPv4)
-)
-```
-
-#### 802.1Q & 802.1ad QinQ VLAN (`Vlan.py`)
-```python
-from LightPacket.Vlan import VLAN
-from LightPacket.EthernetII import Ethernet
-from LightPacket.ipv4 import IPv4
-
-# Single 802.1Q Tag:
-vlan_pkt = Ethernet() / VLAN(vlan_id=100, priority=3) / IPv4(dst="10.0.0.1")
-
-# QinQ (Stacked VLANs):
-qinq_pkt = Ethernet() / VLAN(vlan_id=10) / VLAN(vlan_id=20) / IPv4()
-```
-
-#### Address Resolution Protocol (`Arp.py`)
-```python
-from LightPacket.Arp import ARP
-
-# ARP Who-has Request:
-arp_req = ARP(opcode=1, ipsrc="192.168.1.10", ipdst="192.168.1.1")
-
-# ARP Is-at Reply:
-arp_rep = ARP(opcode=2, macsrc="00:11:22:33:44:55", ipsrc="192.168.1.1", macdst="aa:bb:cc:dd:ee:ff", ipdst="192.168.1.10")
-```
-
-#### Spanning Tree Protocol (`Stp.py`)
-```python
-from LightPacket.Stp import STP
-from LightPacket.LLC import LLC
-
-# Configuration BPDU:
-stp_pkt = LLC(dsap=0x42, ssap=0x42) / STP(root_priority=0x8000, root_mac="00:11:22:33:44:55")
-```
-
-#### EAPOL & 802.1X Authentication (`eapol.py`)
-```python
-from LightPacket.eapol import EAPOL, EAP_IDENTITY, EAP_MD5, EAP_TLS
-
-# EAPOL Start:
-eapol_start = EAPOL()
-
-# EAP Identity Response:
-eap_id = EAPOL() / EAP_IDENTITY(id=1, identity=b"alice@corp.net")
-```
-
-#### Linux Cooked Capture (`platforms.linux.sll`)
-```python
-from LightPacket.platforms.linux.sll import SLLv1, SLLv2
-
-# Parse or build SLL frames captured on 'any' interface
-sll = SLLv1(arphrd_type=1, proto=0x0800)
-```
-
----
-
-### Layer 3 & Layer 4 Protocols (`LightPacket.l3`)
-
-#### Internet Protocol Version 4 (`ipv4.py`)
-```python
-from LightPacket.ipv4 import IPv4
-
-ip = IPv4(
-    src="192.168.1.10",
-    dst="1.1.1.1",
-    ttl=64,
-    tos=0x10,
-    proto=6     # Auto-inferred if stacked with TCP (6) or UDP (17)
-)
-```
-
-#### Internet Protocol Version 6 (`ipv6.py`)
-```python
-from LightPacket.ipv6 import IPv6
-from LightPacket.helper.ipv6.IPv6ExtHeader import IPv6ExtHeader
-from LightPacket.tcp import TCP
-
-# Base IPv6:
-ip6 = IPv6(src="2001:db8::1", dst="2001:db8::2", hop_limit=64)
-
-# Chained Extension Headers:
-ip6_ext = IPv6(dst="2001:db8::2") / IPv6ExtHeader(next_header=6,data=8*b'\x01',type=44) / TCP(dport=80)
-```
-
-#### Transmission Control Protocol (`tcp.py`)
-```python
-from LightPacket.tcp import TCP
-
-# TCP SYN packet:
-tcp_syn = TCP(sport=43210, dport=443, flags=0x02, seq=1000, window=65535)
-
-# TCP ACK packet:
-tcp_ack = TCP(sport=43210, dport=443, flags=0x10, seq=1001, ack=5001)
-```
-
-#### User Datagram Protocol (`udp.py`)
-```python
-from LightPacket.udp import UDP
-from LightPacket.Raw import Raw
-
-# DNS query over UDP:
-udp_pkt = UDP(sport=5353, dport=53) / Raw(b"\x12\x34\x01\x00\x00\x01")
-```
-
----
-
-### IEEE 802.11 Wireless (`Wireless/wlan.py`)
-
-Craft and parse 802.11 Wi-Fi frames directly:
+Create a packet by stacking layers, then serialize it to bytes:
 
 ```python
-from LightPacket.l2 import WiFi,Beacon,Element
-from LightPacket import GetMac,MacAddress
-p = WiFi(
-    subtype=8,
-    duration=0x0000,
-    addr1=b'\xff\xff\xff\xff\xff\xff',
-    addr2=bytes(MacAddress(GetMac.GetMac())),
-    addr3=bytes(MacAddress(GetMac.GetMac())),
-    seq_control=0x0000,
-) / Beacon(
-    timestamp=0,
-    beacon_interval=100,
-    capability=0,
-) / Element(
-    ie_id=0,
-    data=b'Light-AP'
-) / Element(
-    ie_id=45,
-    data=b'n\x00\x17\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-) / Element(
-    ie_id=3,
-    data=b'\x06'
-) / Element(
-    ie_id=1,
-    data=b'\x82\x84\x86\x88\x96'
-) / Element(
-    ie_id=48,
-    data=b'\x01\x00\x00\x0f\xac\x04\x01\x00\x00\x0f\xac\x04\x01\x00\x00\x0f\xac\x02\x00\x00'
-) / Element(
-    ie_id=61,
-    data=b'\x06\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff'
-) / Element(
-    ie_id=221,
-    oui=b'\xD8\x93\x33',
-    ouitype=1,
-    data=b'Light-Cloud'
-) / Element(
-    ie_id=114,
-    data=b'Light-Mesh'
-) / Element(
-    ie_id=107,
-    data=b'\x00\x00'
-)
-```
-
----
-
-## Automatic Dissection & Introspection
-
-### Dissecting Raw Bytes (`DetectLayer`)
-
-`DetectLayer` automatically inspects wire bytes, decodes each layer header, calculates offsets, and reconstructs the packet tree:
-
-```python
-from LightPacket import DetectLayer
-
-raw_bytes = b"\x00\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa\xbb\x08\x00\x45\x00"
-parsed_pkt = DetectLayer().start(raw_bytes)
-
-# Display colored visual representation:
-parsed_pkt.show()
-
-# Access layers directly:
-if parsed_pkt.haslayer("IPv4"):
-    print("Destination IP:", parsed_pkt["IPv4"].dst)
-```
-
-### Protocol Introspection (`ls`)
-
-Inspect any protocol's fields, types, and descriptions in the terminal:
-
-```python
-from LightPacket import ls
-from LightPacket.tcp import TCP
-
-# Inspect TCP layer definition:
-ls(TCP)
-
-# Or inspect by name:
-ls("IPv4")
-
-# List all supported protocols in LightPacket:
-ls()
-```
-
----
-
-## Pure-Python cBPF Engine (`LightBPF`)
-
-LightPacket 1.0.1 includes a built-in, pure-Python Berkeley Packet Filter engine that compiles pcap-filter expressions into classic BPF machine code with **zero dependencies**.
-
-```python
-from LightPacket.LightBPF.CompilerSet.Compiler import BpfCompiler
-from LightPacket.LightBPF.CompilerSet.Disassembler import disassemble
-from LightPacket.LightBPF.CompilerSet.Emulator import BpfEmulator
-
-# 1. Compile filter string into cBPF instructions
-insns = BpfCompiler.compile_str("tcp port 80 and src host 192.168.1.10")
-
-# 2. Print readable assembly (similar to 'tcpdump -d')
-print(disassemble(insns))
-
-# 3. Test filter on raw packets offline (without root / libpcap)
-matched = BpfEmulator.execute(insns, b'...')
-if matched > 0:
-    print("Filter matched!")
-```
-
-### Attaching to Sockets via Kernel `SO_ATTACH_FILTER`
-
-```python
-import socket
-from LightPacket.LightBPF.CompilerSet.Compiler import BpfCompiler
-from LightPacket.LightBPF.CompilerSet.Fprog import to_fprog
-
-sock = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(0x0003))
-sock.bind(("eth0", 0))
-
-# Compile and export to ctypes sock_fprog
-fprog = to_fprog(BpfCompiler.compile_str("tcp and not dst port 22"))
-
-# Attach directly to the Linux kernel socket filter
-SO_ATTACH_FILTER = 26
-sock.setsockopt(socket.SOL_SOCKET, SO_ATTACH_FILTER, fprog)
-```
-
-For complete technical documentation on the Lexer, Parser, Compiler, and Virtual Machine, refer to the [LightBPF Guide](LightBPF/README.md).
-
----
-
-## Live Packet Sniffing
-
-### High-Level Sniffer (`Sniffer.py`)
-
-Capture live network traffic using streaming iterators or callbacks:
-
-```python
-from LightPacket import Sniffer, DetectLayer
-
-# 1. Stream packets with a filter:
-with Sniffer(iface="eth0", filter="tcp or udp", timeout=10.0) as s:
-    for raw in s.stream():
-        packet = DetectLayer().start(raw)
-        print(f"Captured: {packet.summary()}")
-
-# 2. Callback mode:
-def on_packet(raw):
-    print(f"Received {len(raw)} bytes")
-
-Sniffer(iface="eth0", count=50).start(callback=on_packet)
-```
-
----
-
-## Native Network Sockets
-
-### Cross-Platform `L2Socket` (libpcap / Npcap)
-
-Works identically across Linux, Windows, macOS, and BSD:
-
-```python
-from LightPacket import L2Socket
-from LightPacket.l2 import Ethernet, ARP
-
-sock = L2Socket(iface="eth0", promisc=True)
-
-# Send Layer 2 frame:
-sock.sendl2(Ethernet() / ARP())
-
-# Send and wait for single reply:
-reply = sock.srp1(Ethernet() / ARP(ipdst="192.168.1.1"), timeout=2.0)
-if reply:
-    print("Host MAC:", reply.macsrc)
-
-sock.close()
-```
-
-### Linux Zero-Copy `L2Packet` (`AF_PACKET`)
-
-Low-overhead, ultra-fast raw socket for Linux bypassing libpcap:
-
-```python
-from LightPacket.platforms.linux.L2Packet import L2Packet
-
-sock = L2Packet(iface="eth0")
-sock.sendl2(b'...')
-
-# Receive up to 10 packets within 2.5 seconds:
-packets = sock.recvl2(count=10, timeout=2.5)
-sock.close()
-```
-
----
-
-## Packet Capture I/O & Replay
-
-### PCAP Files (`lib.py_pcap_writer`, `lib.py_pcap_reader`)
-
-Pure-Python reading and writing of classic `.pcap` files (supporting microsecond, nanosecond, little-endian, and big-endian formats):
-
-```python
-from LightPacket import create_pcap_file, PcapReader, PyPcapngWriter, PyPcapngReader
-
-# Write captured frames:
-create_pcap_file(packetarr=[b'.......',b'..........'], filename="capture.pcap",totalpackets=2)
-
-# Read frames (returns header and packet list):
-header, packets = PcapReader("capture.pcap")
-print(f"Network link type: {header[0]['network']}, Snaplen: {header[0]['snaplen']}")
-for p in packets:
-    print(f"Time: {p['ts_sec']}.{p['ts_usec']:06d}s, Length: {p['incl_len']} bytes")
-
-# Streaming write/read via context manager:
-with PyPcapngWriter("stream.pcap") as writer:
-    writer.write_one(b'.................')
-
-with PyPcapngReader("stream.pcap") as reader:
-    for p in reader.packets:
-        print(len(p["data"]))
-```
-
-### PCAPNG Files (`lib.py_pcapng`)
-
-Pure-Python reading and writing of modern `.pcapng` capture files (supporting multiple interfaces, options, and 64-bit microsecond timestamps):
-
-```python
-from LightPacket import PyPcapngWriter, PyPcapngReader
-
-# Write to PCAPNG:
-with PyPcapngWriter("session.pcapng") as writer:
-    iface_id = writer.add_interface(name="eth0", link_type=1)
-    writer.write_packet(interface_id=iface_id, ts_usecs=123456789, data=b'..................')
-
-# Read from PCAPNG:
-with PyPcapngReader("session.pcapng") as reader:
-    print(f"Interfaces: {[iface.name for iface in reader.interfaces]}")
-    for pkt in reader:
-        print(f"Interface: {pkt.interface_id}, Timestamp: {pkt.timestamp_usecs}µs, Len: {pkt.captured_len}")
-```
-
-### LBN High-Speed Format (`lib.py_lbn`)
-
-**Light Binary Notation (LBN)** is LightPacket's lightweight, self-contained binary packet format featuring CRC-32 header integrity checks and optional per-file zlib compression:
-
-```python
-from LightPacket import lbn_save,lbn_load
-
-# High-speed compressed storage (LBN 1.1 with zlib level 6 compression):
-lbn_save("traffic.lbn", [pkt1.build(), pkt2.build()], compress=1)
-
-# Read back byte-for-byte:
-loaded_packets = lbn_load("traffic.lbn")
-
-```
-
-### Packet Replay Engine (`utils.replay`)
-
-Replay capture files (`.pcap`, `.pcapng`, or `.lbn`) through any socket interface:
-
-```python
-from LightPacket import L2Socket
-from LightPacket.utils.replay import replay
-
-sock = L2Socket(iface="eth0")
-
-# Replay capture with 50ms delay, 10% jitter, looping 3 times:
-sent = replay(
-    file_path="capture.pcapng",
-    socket=sock,
-    delay=0.05,
-    loop=3,
-    jitter=0.10,
-    on_packet=lambda idx, data: print(f"Sent packet #{idx}")
-)
-
-print(f"Replay finished. Total packets sent: {sent}")
-sock.close()
-```
-
----
-
-## Network Interfaces & Utilities
-
-### Interface Enumeration
-
-```python
-from LightPacket import NetworkInterfaces
-
-ifaces = NetworkInterfaces()
-
-# Show formatted table:
-ifaces.show()
-
-# Get default gateway and interface:
-default_iface = ifaces.default_interface()
-print(f"Default: {default_iface['name']} ({default_iface['mac']})")
-```
-
-### MAC & IP Helpers
-
-```python
-from LightPacket import MacAddress, inet_aton, inet_ntoa, hexdump
-
-# MAC formatting:
-mac = MacAddress("001122334455")
-print(mac.colon())  # "00:11:22:33:44:55"
-
-# Binary Hex Dump:
-print(hexdump(b"\x00\x01\x02\x03\x04\x05\x06\x07"))
-```
-
----
-
-## Comprehensive Real-World Examples
-
-### 1. High-Speed ARP Network Scanner
-
-```python
-import time
-from LightPacket import L2Socket, DetectLayer
-from LightPacket.l2 import Ethernet, ARP
-
-def scan_network(subnet_ips, interface="eth0"):
-    sock = L2Socket(iface=interface)
-    sock.set_filter("arp and arp[6:2] == 2")  # ARP Replies only
-
-    print(f"Scanning {len(subnet_ips)} hosts on {interface}...")
-    for ip in subnet_ips:
-        sock.sendl2(Ethernet(dst="ff:ff:ff:ff:ff:ff") / ARP(opcode=1, ipdst=ip))
-        time.sleep(0.01)
-
-    # Collect replies
-    replies = sock.recvl2(count=len(subnet_ips), timeout=2.0)
-    for raw in replies:
-        pkt = DetectLayer().start(raw)
-        if pkt and ARP in pkt:
-            print(f"Host online: {pkt[ARP].ipsrc} -> {pkt[ARP].macsrc}")
-
-    sock.close()
-```
-
-### 2. TCP SYN Port Scanner
-
-```python
-from LightPacket import L2Socket, DetectLayer
 from LightPacket.l2 import Ethernet
 from LightPacket.l3 import IPv4, TCP
+from LightPacket.Raw import Raw
 
-def syn_scan(target_ip, ports, interface="eth0"):
-    sock = L2Socket(iface=interface)
-    sock.set_filter(f"tcp and src host {target_ip}")
+packet = (
+    Ethernet(dst="aa:bb:cc:dd:ee:ff")
+    / IPv4(dst="192.168.1.1")
+    / TCP(dport=80, flags=0x02)
+    / Raw(b"example payload")
+)
 
-    for port in ports:
-        syn = Ethernet() / IPv4(dst=target_ip) / TCP(dport=port, flags="S", seq=1000)
-        sock.sendl2(syn)
-
-        resp = sock.srp1(syn, timeout=1.0)
-        if resp and resp.haslayer("TCP"):
-            flags = resp["TCP"].flags
-            if "S" in flags and "A" in flags:
-                print(f"Port {port}: OPEN (SYN-ACK)")
-            elif "R" in flags:
-                print(f"Port {port}: CLOSED (RST)")
-
-    sock.close()
+wire_bytes = packet.build()
+print(f"Built {len(wire_bytes)} bytes")
 ```
 
----
+This example constructs a packet; sending raw traffic requires a suitable socket, interface, and permissions.
 
-## Architecture & Capture I/O Migration
+## Documentation
 
-### Pure-Python Capture Engine (`lib/` )
+The README introduces the project rather than documenting every class and field. See the following guides for detailed usage:
 
-To guarantee seamless installation across all platforms without requiring C compilers or manual `.so`/`.dll` builds, the capture file I/O layer has been completely implemented in 100% pure Python:
+- [LightBPF guide](LightBPF/README.md) — filter syntax, compilation, disassembly, and execution.
+- [API reference](https://github.com/Light-Projects/LightPacket) — package modules and protocol definitions.
 
-| Format | Module | Description |
-|---|---|---|
-| **PCAP** | `LightPacket.lib.py_pcap_reader`<br>`LightPacket.lib.py_pcap_writer` | Full standard libpcap implementation. Supports microsecond (`0xA1B2C3D4`) and nanosecond (`0xA1B23C4D`) timestamps, host and opposite endianness with automatic byte swapping, and standard link types (`ETHERNET`, `PPP`, `RAW`, `IEEE802_11`). |
-| **PCAPNG** | `LightPacket.lib.py_pcapng` | Modern PCAP Next Generation format. Implements Section Header Blocks (SHB with 64-bit length), Interface Description Blocks (IDB with interface options and alignment), and Enhanced Packet Blocks (EPB with 64-bit microsecond timestamps and 4-byte padding). |
-| **LBN** | `LightPacket.lib.py_lbn`<br> | Light Binary Notation. High-speed, self-contained binary packet sequence storage featuring CRC-32 header integrity validation and optional per-file zlib compression (LBN 1.1 and 1.0 backward compatibility). |
+## Project status
 
-- **Zero-Dependency Installation**: No external shared library builds or C compiler prerequisites are required.
-- **Direct Python Execution**: File read and write operations run natively in pure Python without falling back to external C libraries.
-- **Full Test Suite & Backward Compatibility**: Maintains full interoperability with standard tools (Wireshark, tcpdump) and preserves complete mock compatibility for existing test suites.
+LightPacket is an open-source project. The repository README identifies version 1.0.3 .
 
----
+The project’s capabilities and platform support continue to evolve. Check the documentation and issue tracker before relying on a particular protocol layer or live-capture backend in a production environment.
 
-## Version Information
+## Contributing
 
-```python
-import LightPacket
-
-print(f"LightPacket Version: {LightPacket.__version__}")  # '1.0.2'
-```
-
----
+Bug reports, feature requests, and contributions are welcome. Please open an issue or pull request in the [LightPacket repository](https://github.com/Light-Projects/LightPacket).
 
 ## License
 
-LightPacket is released under the **Mozilla Public License 2.0 (MPL-2.0)**. See the [LICENSE](LICENSE) file for full details.
+LightPacket is released under the [Mozilla Public License 2.0](LICENSE).
 
----
+## Author
 
-## Author & Community
-
-- **Main Dev**: Adam Boulaaz ([@adamboulaaz92-jpg](https://github.com/adamboulaaz92-jpg))
-- **Repository**: [https://github.com/Light-Projects/LightPacket](https://github.com/Light-Projects/LightPacket)
-- **Issues & Contributions**: Please submit bug reports and feature requests to the [GitHub Issue Tracker](https://github.com/Light-Projects/LightPacket/issues).
+**Adam Boulaaz** — [GitHub](https://github.com/adamboulaaz92-jpg)
