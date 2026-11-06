@@ -6,9 +6,7 @@ import random
 import time
 from typing import Callable, Iterator, Optional
 
-from LightPacket.Saving.pcapreader import PcapReadStream
-from LightPacket.Saving.lbn import LbnReadStream
-from LightPacket.Saving.pcapng import PcapngReader
+from LightPacket import PcapReader, PyPcapngReader
 from LightPacket.file.dtype import detect_file_type
 from LightPacket.Logger.LightLogger import Logger, WarningCode
 
@@ -85,28 +83,21 @@ def _with_jitter(delay: float, jitter: float) -> float:
 
 def _iter_packets(type_: str, file_path: str) -> Iterator[bytes]:
     if type_ == 'pcap':
-        with PcapReadStream(file_path) as stream:
-            for pkt in stream.packets:
-                yield pkt['data']
-
-    elif type_ == 'lightbin':
-        with LbnReadStream(file_path) as stream:
-            for pkt in stream:
-                yield pkt
+        with PcapReader(file_path) as stream:
+            yield stream.read_packet()['data']
 
     elif type_ == 'pcapng':
-        with PcapngReader(file_path) as reader:
-            for pkt in reader:
-                yield pkt.data
+        with PyPcapngReader(file_path) as stream:
+            yield stream.read_packet().data
 
     else:
         LLogger.warning(
             message=f"Unknown capture file format for '{file_path}', trying as PCAP"
         )
         try:
-            with PcapReadStream(file_path) as stream:
-                for pkt in stream.packets:
-                    yield pkt['data']
+            with PcapReader(file_path) as stream:
+                yield stream.read_packet()['data']
+
         except Exception as e:
             LLogger.warning(message=f"Failed to read '{file_path}' as PCAP fallback: {e}",
                             warning_code=WarningCode.UNKNOWN_FILE_FORMAT)

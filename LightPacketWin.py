@@ -9,7 +9,7 @@ from LightPacket.utils.CIDR import *
 from LightPacket.Logger.LightLogger import *
 from LightPacket.Logger.Errors import *
 
-from LightPacket.Layers.L2Socket import *
+from LightPacket.Layers.WinSocket import *
 from LightPacket.Layers.Mac import *
 from LightPacket.Layers.register import *
 from LightPacket.Layers.get_layers import *
@@ -20,7 +20,6 @@ from LightPacket.helper.ipv4.IPtoa import *
 
 from LightPacket.lib.py_pcapng import *
 from LightPacket.lib.py_pcap_reader import *
-from LightPacket.lib.py_lbn import *
 from LightPacket.lib.py_pcap_writer import *
 
 from LightPacket.Sniffer import *

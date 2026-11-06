@@ -9,6 +9,9 @@ import ctypes
 import time
 import socket
 import select
+import struct
+import fcntl
+
 from LightPacket.bpf import get_bpf_bytes,free_filter
 from typing import List
 from LightPacket.Logger.LightLogger import Logger, ErrorCode
@@ -59,12 +62,12 @@ class L2Packet:
             return False
 
         try:
-            filter_bytes,bp = get_bpf_bytes(filter_str, self.iface)
+            fp,bp = get_bpf_bytes(filter_str, self.iface)
         except Exception:
             Logger.error(error_code=ErrorCode.CANNOT_COMPILE_BPF,message="Cannot compile filter filter, make sure libpcap is installed")
 
         self._filter = filter_str
-        self.sock.setsockopt(socket.SOL_SOCKET, 26, filter_bytes)
+        self.sock.setsockopt(socket.SOL_SOCKET, 26, fp)
         free_filter(bp)
         return True
 
@@ -121,6 +124,15 @@ class L2Packet:
             self.sock.setblocking(was_blocking)
 
         return packets
+
+    def get_sll_type(self) -> int:
+        SIOCGIFHWADDR = 0x8927
+        ifreq = struct.pack('16sH14s', self.iface.encode('utf-8'), 0, b'')
+
+        with socket.socket(socket.AF_PACKET, socket.SOCK_RAW) as s:
+            res = fcntl.ioctl(s.fileno(), SIOCGIFHWADDR, ifreq)
+            _, hatype, _ = struct.unpack('16sH14s', res)
+            return hatype
 
     def close(self):
         """Close the socket."""

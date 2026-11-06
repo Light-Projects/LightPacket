@@ -40,8 +40,6 @@ class NetworkInterfaces:
 
     def _load_netifaces(self):
         for interface in netifaces.interfaces():
-            if interface.startswith('lo'):
-                continue
 
             addrs = netifaces.ifaddresses(interface)
             ips_v4 = []

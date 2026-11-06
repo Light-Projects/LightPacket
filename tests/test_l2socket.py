@@ -41,7 +41,7 @@ def _has_iface(name: str) -> bool:
 
 needs_root = pytest.mark.skipif(not _is_root(), reason="requires root/Administrator")
 needs_loopback = pytest.mark.skipif(
-    sys.platform != "win32" and not _has_iface("lo"),
+    sys.platform != "win32" and not _has_iface("lo" if sys.platform == "linux" else "lo0"),
     reason="requires loopback interface 'lo' (Linux/BSD/macOS)",
 )
 
@@ -50,13 +50,13 @@ def _load_socket_class():
     """Import the platform-appropriate L2Socket, or skip if unavailable."""
     if sys.platform == "win32":
         try:
-            from LightPacket.Layers.L2Socket import L2Socket
+            from LightPacket.Layers.WinSocket import L2Socket
             return L2Socket
         except Exception as e:
             pytest.skip(f"Windows Npcap L2Socket unavailable: {e}")
     else:
         try:
-            from LightPacket.Layers.L2SocketL import L2Socket
+            from LightPacket.Layers.PosixSocket import L2Socket
             return L2Socket
         except Exception as e:
             pytest.skip(f"libpcap L2Socket unavailable: {e}")
@@ -66,7 +66,9 @@ def _loopback_iface():
     if sys.platform == "win32":
         # Npcap exposes loopback as \\Device\\NPF_Loopback
         return r"\Device\NPF_Loopback"
-    return "lo"
+    elif sys.platform == "linux":
+        return "lo"
+    return "lo0"
 
 @pytest.fixture
 def sock():

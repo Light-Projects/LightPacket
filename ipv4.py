@@ -19,6 +19,7 @@ PROTO_TCP = 6
 PROTO_UDP = 17
 PROTO_IPV6 = 41
 PROTO_SCTP = 132
+PROTO_UDP_LITE = 136
 
 IP_PROTOCOLS = {
     0: "HOPOPT",
@@ -225,7 +226,8 @@ class IPv4(BaseLayer):
             self.proto = {
                 'UDP':  PROTO_UDP,
                 'TCP':  PROTO_TCP,
-                'ICMP': PROTO_ICMP
+                'ICMP': PROTO_ICMP,
+                'UDPLite': PROTO_UDP_LITE,
             }.get(layer, 0)
 
         options_bytes = self.options.build()
@@ -241,6 +243,8 @@ class IPv4(BaseLayer):
         dst = self.dst if self.dst is not None else "0.0.0.0"
 
         if layer == 'UDP' and self.payload.checksum is None:
+            self.payload.compute_checksum(src=src, dst=dst, is_ipv6=False)
+        elif layer == "UDPLite" and self.payload.checksum is None:
             self.payload.compute_checksum(src=src, dst=dst, is_ipv6=False)
         elif layer == 'TCP' and self.payload.checksum is None:
             self.payload.compute_checksum(src=src, dst=dst, is_ipv6=False)
@@ -431,15 +435,19 @@ class IPv4Parser:
                 from LightPacket.Raw import FragmentParser
                 return ip / FragmentParser.load_as_frag_layer(payload, verbose=verbose)
 
-            if proto == 17:
+            if proto == PROTO_UDP:
                 from LightPacket.udp import UDPParser
                 return ip / UDPParser.load_as_udp_layer(payload, verbose=verbose, p=p)
 
-            if proto == 6:
+            if proto == PROTO_UDP_LITE:
+                from LightPacket.udp import UDPLiteParser
+                return ip / UDPLiteParser.load_as_udplite_layer(payload, verbose=verbose)
+
+            if proto == PROTO_TCP:
                 from LightPacket.tcp import TCPParser
                 return ip / TCPParser.load_as_tcp_layer(payload, verbose=verbose)
 
-            if proto == 1:
+            if proto == PROTO_ICMP:
                 from LightPacket.icmp import ICMPParser
                 return ip / ICMPParser.load_as_icmp_layer(payload, verbose=verbose)
 

@@ -17,6 +17,7 @@ PROTO_ICMP = 1
 PROTO_TCP = 6
 PROTO_UDP = 17
 PROTO_ICMPV6 = 58
+PROTO_UDP_LITE = 136
 
 EXT_HEADERS = {
     0:   "Hop-by-Hop Options",
@@ -62,7 +63,8 @@ class IPv6(BaseLayer):
             else:
                 self.next_header = {
                     'UDP':    PROTO_UDP,
-                    'TCP':    PROTO_TCP
+                    'TCP':    PROTO_TCP,
+                    'UDPLite': PROTO_UDP_LITE
                 }.get(layer, 0)
 
         src = self.src
@@ -71,6 +73,8 @@ class IPv6(BaseLayer):
         dst = self.dst if self.dst is not None else "::"
 
         if layer == 'UDP' and self.payload.checksum is None:
+            self.payload.compute_checksum(src=src, dst=dst, is_ipv6=True)
+        elif layer == "UDPLite" and self.payload.checksum is None:
             self.payload.compute_checksum(src=src, dst=dst, is_ipv6=True)
         elif layer == 'TCP' and self.payload.checksum is None:
             self.payload.compute_checksum(src=src, dst=dst, is_ipv6=True)
@@ -245,13 +249,17 @@ class IPv6Parser:
                 from LightPacket.Raw import FragmentParser
                 return result / FragmentParser.load_as_frag_layer(payload, verbose=verbose)
 
-            if current_type == 17:
+            if current_type == PROTO_UDP:
                 from LightPacket.udp import UDPParser
                 return result / UDPParser.load_as_udp_layer(payload, verbose=verbose, p=p)
 
-            if current_type == 6:
+            if current_type == PROTO_TCP:
                 from LightPacket.tcp import TCPParser
-                return ip / TCPParser.load_as_tcp_layer(payload, verbose=verbose)
+                return ip / TCPParser.load_as_tcp_layer(payload, verbose=verbose)\
+
+            if current_type == PROTO_UDP_LITE:
+                from LightPacket.udp import UDPLiteParser
+                return ip / UDPLiteParser.load_as_udplite_layer(payload, verbose=verbose)
 
             from LightPacket.Raw import RawParser
             return result / RawParser.load_as_Raw_layer(payload, verbose=verbose)

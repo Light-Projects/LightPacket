@@ -37,14 +37,7 @@ from LightPacket.lib.py_pcapng import (
     BLOCK_TYPE_SHB,
     BYTE_ORDER_MAGIC,
 )
-from LightPacket.lib.py_lbn import (
-    lbn_save,
-    lbn_save_v1_0,
-    lbn_load,
-    lbn_checksum,
-    LBN_MAGIC,
-    LBN_MAGIC_OLD,
-)
+
 
 # Also test high-level Saving modules in pure-Python mode
 
@@ -191,68 +184,4 @@ def test_pcapng_invalid_type_raises(tmp_path):
         with pytest.raises(TypeError):
             writer.write_packet(idx, 1000, "not bytes")
 
-
-# ==============================================================================
-# LBN Pure Python Tests
-# ==============================================================================
-
-def test_lbn_v1_1_uncompressed_roundtrip(tmp_path):
-    path = str(tmp_path / "test_v1_1.lbn")
-    packets = [b"frame 1", b"frame 2 with more data", b"x"]
-
-    rc = lbn_save(path, packets, compress=0)
-    assert rc == 0
-
-    loaded = lbn_load(path)
-    assert loaded == packets
-
-
-def test_lbn_v1_1_compressed_roundtrip(tmp_path):
-    path = str(tmp_path / "test_v1_1_comp.lbn")
-    # Repetitive data compresses well
-    packets = [b"A" * 1000, b"B" * 2000, b"C" * 500]
-
-    rc = lbn_save(path, packets, compress=1)
-    assert rc == 0
-
-    # Verify compression occurred on disk
-    assert os.path.getsize(path) < 3500
-
-    loaded = lbn_load(path)
-    assert loaded == packets
-
-
-def test_lbn_v1_0_roundtrip(tmp_path):
-    path = str(tmp_path / "test_v1_0.lbn")
-    packets = [b"legacy pkt 1", b"legacy pkt 2"]
-
-    rc = lbn_save_v1_0(path, packets, compress=0)
-    assert rc == 0
-
-    loaded = lbn_load(path)
-    assert loaded == packets
-
-
-def test_lbn_checksum_corruption_detection(tmp_path):
-    path = str(tmp_path / "corrupt.lbn")
-    lbn_save(path, [b"secret payload"], compress=0)
-
-    # Corrupt 1 byte in the 20-byte header (e.g. byte offset 8 in header = byte 12 in file)
-    with open(path, "r+b") as f:
-        f.seek(12)
-        val = f.read(1)[0]
-        f.seek(12)
-        f.write(bytes([val ^ 0xFF]))
-
-    # Must fail checksum verification and return None
-    assert lbn_load(path) is None
-
-
-def test_lbn_saving_high_level(tmp_path):
-    path = str(tmp_path / "stream.lbn")
-    ok = lbn_save(path, [b"packet-a", b"packet-b"], 2, compress=1)
-    assert ok == 0
-
-    result = lbn_load(path)
-    assert result == [b"packet-a", b"packet-b"]
 

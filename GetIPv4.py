@@ -14,7 +14,7 @@ def GetIPv4():
     else:
         from LightPacket.LightPacketUnix import get_default_interface_bsd
         try:
-            ip = get_default_interface_bsd()['ips_v4']
+            ip = get_default_interface_bsd()['ips_v4'][0]
         except Exception:
             ip = None
     return ip if ip else "0.0.0.0"

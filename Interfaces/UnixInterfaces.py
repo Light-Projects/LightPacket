@@ -407,4 +407,4 @@ def get_best_route_bsd(dest_ip: str) -> Optional[Dict[str, Any]]:
     return None
 
 
-get_loopback_interface_name = lambda: "lo"
+get_loopback_interface_name = lambda: "lo0"

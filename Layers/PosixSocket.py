@@ -14,8 +14,6 @@ from ctypes.util import find_library
 import sys
 import time
 import select
-import struct
-import subprocess
 from typing import Optional
 from LightPacket.Interfaces.LibpcapInterfacesLin import get_default_interface_name_linux
 from LightPacket.Interfaces.UnixInterfaces import get_default_interface_bsd
@@ -163,33 +161,6 @@ if config.network.INTERFACE == None:
         config.network.INTERFACE = get_default_interface_name_linux()
     else:
         config.network.INTERFACE = get_default_interface_bsd()['name']
-
-def compile_filter_tcpdump(filter_string, iface):
-    """Compiles a BPF filter using tcpdump."""
-    try:
-        cmd = ["tcpdump", "-i", iface, "-ddd", filter_string]
-        output = subprocess.check_output(cmd, stderr=subprocess.DEVNULL).decode().strip().split('\n')
-
-        if not output:
-            raise Exception("tcpdump returned no output")
-
-        nb_instructions = int(output[0])
-
-        bpf = b""
-        for line in output[1:]:
-            code, jt, jf, k = map(int, line.split())
-            bpf += struct.pack("HBBI", code, jt, jf, k)
-
-        import sys
-        ptr_offset = 20 if sys.maxsize <= 2 ** 32 else 36
-        bpfh = struct.pack("HL", nb_instructions, id(bpf) + ptr_offset)
-        return bpfh
-
-    except subprocess.CalledProcessError as e:
-        raise Exception(f"Failed to compile filter: {e.stderr}") from e
-    except Exception as e:
-        raise Exception(f"Error compiling filter: {e}") from e
-
 
 class bpf_insn(ctypes.Structure):
     _fields_ = [

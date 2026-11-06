@@ -11,7 +11,7 @@ from LightPacket.Logger.Errors import *
 
 from LightPacket.Layers.register import *
 from LightPacket.Layers.get_layers import *
-from LightPacket.Layers.L2SocketL import *
+from LightPacket.Layers.PosixSocket import *
 from LightPacket.Layers.Mac import *
 
 from LightPacket.helper.ls import *
@@ -20,7 +20,6 @@ from LightPacket.helper.ipv4.IPtoa import *
 
 from LightPacket.lib.py_pcapng import *
 from LightPacket.lib.py_pcap_reader import *
-from LightPacket.lib.py_lbn import *
 from LightPacket.lib.py_pcap_writer import *
 
 from LightPacket.Sniffer import *

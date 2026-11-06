@@ -5,6 +5,8 @@
 """
 BPF Compilation Process
 """
+
+import struct
 import ctypes
 from ctypes import (
     create_string_buffer, c_int, c_char_p, c_uint,
@@ -17,7 +19,7 @@ except OSError:
     try:
         pcap_lib = ctypes.CDLL("libpcap.so")
     except OSError:
-        pass
+        raise RuntimeError("libpcap not found, make sure libpcap is installed")
 
 
 class bpf_program(ctypes.Structure):
@@ -110,3 +112,17 @@ def to_instructions(bp: bpf_program) -> list:
 def to_bytes(bp: bpf_program) -> bytes:
     """Raw 8-bytes-per-insn bytecode, exactly as the kernel loads it."""
     return ctypes.string_at(bp.bf_insns, bp.bf_len * 8)
+
+def get_bpf_device_struct(bp: bpf_program):
+    """
+    Pack a libpcap bpf_program into the BSD struct bpf_program layout
+    that BIOCSETF expects:
+        struct bpf_program { u_int bf_len; struct bpf_insn *bf_insns; }
+
+    """
+    if bp is None:
+        return None
+
+    insn_ptr = bp.bf_insns if bp.bf_insns is not None else 0
+    return struct.pack("@IP", bp.bf_len, insn_ptr)
+
