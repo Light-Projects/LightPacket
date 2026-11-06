@@ -1,0 +1,12 @@
+{
+  "Proto": {
+    "Name": "UDPLite",
+    "Description": "Layer 4 User Datagram Protocol Lite. Connectionless, unreliable transport with minimal overhead no handshake, ordering, or retransmission, same as normal UDP but  rather then the traditional length field, we have checksum coverage .",
+    "Fields": [
+      "sport         {16 bits}  = 10000 ",
+      "dport         {16 bits}  = 53 ",
+      "cscov         {16 bits}  = 0 ",
+      "checksum      {16 bits}  = None "
+    ]
+  }
+}
