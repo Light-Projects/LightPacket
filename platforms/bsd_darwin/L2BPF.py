@@ -13,7 +13,7 @@ import os
 import select
 import struct
 import time
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 from LightPacket.Config import config
 from LightPacket.LightPacketUnix import get_default_interface_bsd
@@ -33,18 +33,11 @@ from LightPacket.platforms.bsd_darwin.bpf_constants import (
     BIOCIMMEDIATE,
     BIOCSHDRCMPLT,
     FMT_IFREQ,
-    FMT_BPF_HDR,
+    configure_timestamp,
+    parse_bpf_buffer,
 )
 
 Logger = Logger()
-
-# sizeof(bpf_int32) — the alignment unit used by BPF_WORDALIGN.
-_BPF_ALIGNMENT = 4
-
-
-def _wordalign(x: int) -> int:
-    return (x + (_BPF_ALIGNMENT - 1)) & ~(_BPF_ALIGNMENT - 1)
-
 
 def _default_iface() -> Optional[str]:
     if getattr(config.network, "INTERFACE", None):
@@ -117,6 +110,9 @@ class L2BPF:
         )
 
     def _configure(self, iface: str) -> None:
+
+        configure_timestamp(self.fd)
+
         try:
             req = struct.pack("@I", self.snaplen)
             self.buflen = struct.unpack(
@@ -274,37 +270,9 @@ class L2BPF:
             for frame in self.recvl2(count=1, timeout=1.0):
                 yield frame
 
-
     def _parse_buffer(self, buf: bytes):
-        """
-        Walk the chain of bpf_hdr records in a buffer returned by read(2).
-        Yields raw frame bytes (header stripped). Stops silently on truncation.
-        """
-
-        hdr_size = struct.calcsize(FMT_BPF_HDR)
-        offset = 0
-        n = len(buf)
-
-        while offset + hdr_size <= n:
-            try:
-                _tv_sec, _tv_usec, caplen, _datalen, hdrlen = struct.unpack_from(
-                    FMT_BPF_HDR, buf, offset
-                )
-            except struct.error:
-                return
-
-            if hdrlen < hdr_size or hdrlen > (n - offset):
-                return
-
-            pkt_start = offset + hdrlen
-            pkt_end = pkt_start + caplen
-            if pkt_end > n:
-                return
-
-            if caplen > 0:
-                yield buf[pkt_start:pkt_end]
-
-            offset = _wordalign(pkt_end)
+        """Thin wrapper — actual logic lives in bpf_constants.parse_bpf_buffer."""
+        yield from parse_bpf_buffer(buf)
 
     def close(self) -> None:
         if self.closed:
