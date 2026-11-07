@@ -3,8 +3,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 """
-BPF device backend for FreeBSD, OpenBSD, NetBSD, and macOS.
-
+BPF device backend for FreeBSD, OpenBSD, NetBSD, DragonflyBSD and macOS.
 """
 
 import errno
@@ -33,11 +32,19 @@ from LightPacket.platforms.bsd_darwin.bpf_constants import (
     BIOCIMMEDIATE,
     BIOCSHDRCMPLT,
     FMT_IFREQ,
-    configure_timestamp,
-    parse_bpf_buffer,
+    FMT_BPF_HDR,
 )
 
 Logger = Logger()
+
+# sizeof(bpf_int32) — the alignment unit used by BPF_WORDALIGN.
+_BPF_ALIGNMENT = 4
+
+
+def _wordalign(x: int) -> int:
+    """Match the kernel's BPF_WORDALIGN macro."""
+    return (x + (_BPF_ALIGNMENT - 1)) & ~(_BPF_ALIGNMENT - 1)
+
 
 def _default_iface() -> Optional[str]:
     if getattr(config.network, "INTERFACE", None):
@@ -51,7 +58,7 @@ def _default_iface() -> Optional[str]:
 class L2BPF:
     """BPF device socket. One frame per os.write(), N frames per os.read()."""
 
-    _MAX_DEVICES = 256
+    _MAX_DEVICES = 256  # upper bound on /dev/bpfN iteration
 
     def __init__(
         self,
@@ -110,9 +117,7 @@ class L2BPF:
         )
 
     def _configure(self, iface: str) -> None:
-
-        configure_timestamp(self.fd)
-
+        # 1. Buffer length. The kernel rounds it up; store what it returned.
         try:
             req = struct.pack("@I", self.snaplen)
             self.buflen = struct.unpack(
@@ -123,21 +128,30 @@ class L2BPF:
                 "@I", fcntl.ioctl(self.fd, BIOCGBLEN, b"\0" * 4)
             )[0]
 
-        fcntl.ioctl(self.fd,BIOCSETIF,struct.pack(FMT_IFREQ, iface.encode("ascii")[:16]),)
+        # 2. Bind to interface. Required before any read/write succeeds.
+        fcntl.ioctl(
+            self.fd,
+            BIOCSETIF,
+            struct.pack(FMT_IFREQ, iface.encode("ascii")[:16]),
+        )
 
+        # 3. Immediate mode: read() returns as soon as one packet is buffered.
         fcntl.ioctl(self.fd, BIOCIMMEDIATE, struct.pack("@I", 1))
 
+        # 4. Promiscuous mode (best effort; needs privilege on some systems).
         if getattr(config.network, "PROMISC", False):
             try:
                 fcntl.ioctl(self.fd, BIOCPROMISC)
             except OSError:
                 pass
 
+        # 5. We build the link-layer header ourselves when sending.
         try:
             fcntl.ioctl(self.fd, BIOCSHDRCMPLT, struct.pack("@I", 1))
         except OSError:
-            pass
+            pass  # not supported everywhere
 
+        # 6. Non-blocking so select() + os.read() behave predictably.
         flags = fcntl.fcntl(self.fd, fcntl.F_GETFL)
         fcntl.fcntl(self.fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
@@ -164,7 +178,7 @@ class L2BPF:
             return False
 
         try:
-            self._attach_bpf(get_bpf_device_struct(bp))
+            self._attach_fprog(get_bpf_device_struct(bp))
             self._filter = filter_str
             return True
         except (OSError, ValueError) as e:
@@ -179,12 +193,12 @@ class L2BPF:
             except Exception:
                 pass
 
-    def set_filter_bpf(self, fprog: bytes) -> bool:
+    def set_filter_fprog(self, fprog: bytes) -> bool:
         """Attach a pre-built BSD struct bpf_program, already packed as bytes."""
         if self.closed or self.fd is None:
             return False
         try:
-            self._attach_bpf(fprog)
+            self._attach_fprog(fprog)
             return True
         except (OSError, ValueError) as e:
             Logger.error(
@@ -193,7 +207,7 @@ class L2BPF:
             )
             return False
 
-    def _attach_bpf(self, fprog) -> None:
+    def _attach_fprog(self, fprog) -> None:
         if isinstance(fprog, (bytes, bytearray)):
             fp_bytes = bytes(fprog)
         else:
@@ -270,9 +284,41 @@ class L2BPF:
             for frame in self.recvl2(count=1, timeout=1.0):
                 yield frame
 
+
     def _parse_buffer(self, buf: bytes):
-        """Thin wrapper — actual logic lives in bpf_constants.parse_bpf_buffer."""
-        yield from parse_bpf_buffer(buf)
+        """
+        Walk the chain of bpf_hdr records in a buffer returned by read(2).
+        Yields raw frame bytes (header stripped). Stops silently on truncation.
+
+        Layout per record:
+            struct bpf_hdr { timeval bh_tstamp; u_int bh_caplen;
+                             u_int bh_datalen; u_short bh_hdrlen; }
+            <caplen bytes of frame>
+            <padding to BPF_WORDALIGN>
+        """
+        hdr_size = struct.calcsize(FMT_BPF_HDR)
+        offset = 0
+        n = len(buf)
+
+        while offset + hdr_size <= n:
+            try:
+                _tv_sec, _tv_usec, caplen, _datalen, hdrlen = struct.unpack_from(
+                    FMT_BPF_HDR, buf, offset
+                )
+            except struct.error:
+                return
+
+            if hdrlen < hdr_size or hdrlen > (n - offset):
+                return
+            pkt_start = offset + hdrlen
+            pkt_end = pkt_start + caplen
+            if pkt_end > n:
+                return
+
+            if caplen > 0:
+                yield buf[pkt_start:pkt_end]
+
+            offset = _wordalign(pkt_end)
 
     def close(self) -> None:
         if self.closed:
