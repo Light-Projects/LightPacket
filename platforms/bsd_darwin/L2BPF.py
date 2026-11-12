@@ -3,7 +3,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 """
-BPF device backend for FreeBSD, OpenBSD, NetBSD, DragonflyBSD and macOS.
+BPF device backend for FreeBSD, OpenBSD, NetBSD, DragonflyBSD and MacOS.
 """
 
 import errno
