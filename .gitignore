@@ -12,6 +12,7 @@ lib/*.h
 LightPacket.egg-info-PKG-INFO
 LightBPF/OLD
 LightBPF/Fixes
+LightBPF/tests
 
 *.so
 

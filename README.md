@@ -107,6 +107,20 @@ LightPacket is an open-source project .
 
 The project’s capabilities and platform support continue to evolve. Check the documentation and issue tracker before relying on a particular protocol layer or live-capture backend in a production environment.
 
+## Tested Platforms
+
+#### - *Windows 10*
+
+#### - *FreeBSD 15.1*
+
+#### - *OpenBSD 8.0*
+
+#### - *NetBSD 11.1*
+
+#### - *DragonflyBSD 6.4*
+
+#### - *Linux Mint 22.3*
+
 ## Contributing
 
 Bug reports, feature requests, and contributions are welcome. Please open an issue or pull request in the [LightPacket repository](https://github.com/Light-Projects/LightPacket).
