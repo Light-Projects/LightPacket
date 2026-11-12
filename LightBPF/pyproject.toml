@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "LightBPF"
-version = "1.2.0"
+version = "1.2.1"
 description = "A flexible pure python cBPF Compiler"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -15,9 +15,6 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Operating System :: OS Independent",
-]
-dependencies = [
-    "LightPacket>=1.0.2",
 ]
 
 [project.urls]

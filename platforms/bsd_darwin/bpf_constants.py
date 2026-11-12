@@ -7,7 +7,7 @@ BPF Device Constants for macOS, FreeBSD, NetBSD, OpenBSD, and AIX Unix.
 Derived directly from the standard kernel file: <net/bpf.h>
 """
 
-from LightPacket.os_consts import IS_64BITS
+from LightPacket.os_consts import IS_64BITS, OPENBSD, DARWIN
 
 BIOCGBLEN      = 0x40044266  # Get buffer length for reads (u_int)
 BIOCSBLEN      = 0xc0044266  # Set buffer length for reads (u_int)
@@ -60,12 +60,12 @@ FMT_BPF_VERSION = "@HH"  # Total: 4 bytes
     #   - bh_hdrlen (2-byte unsigned short: total header size including alignment bytes)
     #   - Explicit padding to alignment boundaries
 
-if IS_64BITS:
-    FMT_TIMEVAL = "@ll"  # Total: 16 bytes
-    FMT_BPF_HDR = "@llIIH"  # Total Base: 26 bytes (kernel pads this out contextually)
-else:
+if OPENBSD or DARWIN:
     FMT_TIMEVAL = "@ii"  # Total: 16 bytes
-    FMT_BPF_HDR = "@iiIIH"  # Total Base: 26 bytes (kernel pads this out contextually)
+    FMT_BPF_HDR = "@IIIIH"  # Total Base: 26 bytes (kernel pads this out contextually)
+else:
+    FMT_TIMEVAL = "@ll" if IS_64BITS else "@ii"  # Total: 16 bytes
+    FMT_BPF_HDR = "@llIIH" if IS_64BITS else "@iiIIH"  # Total Base: 26 bytes (kernel pads this out contextually)
 
 # Individual raw assembly statement structure inside a filter chain
 

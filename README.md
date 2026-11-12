@@ -1,4 +1,10 @@
-# LightPacket
+![](images/LightPacket-Logo.png)
+
+# LightPacket: Packet Manipulation Library
+
+[![Version 1.0.4](https://img.shields.io/badge/version-1.0.4-orange.svg)](https://github.com/Light-Projects/LightPacket)
+[![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
+[![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
 
 **A Python library
 for building, dissecting, capturing, and replaying network packets.**
@@ -38,7 +44,7 @@ Live capture has platform-specific system requirements. On Linux, raw packet acc
 
 ### Capture files and replay
 
-The pure-Python capture-file modules support classic PCAP and PCAPNG reading and writing. The replay utility can send packets from PCAP, PCAPNG, and LBN files through a socket, with options for pacing, loops, and jitter.
+The pure-Python capture-file modules support classic PCAP and PCAPNG reading and writing. The replay utility can send packets from PCAP, and PCAPNG files through a socket, with options for pacing, loops, and jitter.
 
 ## Installation
 
@@ -63,7 +69,7 @@ pip install .
 Capture-file reading and writing are implemented in pure Python and do not require libpcap. Live capture uses native platform facilities:
 
 - **Linux:** The libpcap-backed socket requires libpcap. The Linux `L2Packet` backend uses `AF_PACKET`. Raw socket operations may require root or appropriate capabilities.
-- **macOS:** Install libpcap, for example with `brew install libpcap`.
+- **macOS:** Install libpcap, for example with `brew install libpcap`. The Darwin/BSD `L2BPF` backend uses `bpf devices` . 
 - **Windows:** Install [Npcap](https://npcap.com/) and select WinPcap API-compatible mode.
 
 ## Quick start
@@ -92,12 +98,12 @@ This example constructs a packet; sending raw traffic requires a suitable socket
 
 The README introduces the project rather than documenting every class and field. See the following guides for detailed usage:
 
-- [LightBPF guide](LightBPF/README.md) — filter syntax, compilation, disassembly, and execution.
-- [API reference](https://github.com/Light-Projects/LightPacket) — package modules and protocol definitions.
+- [LightBPF guide](LightBPF/README.md) - filter syntax, compilation, disassembly, and execution.
+- [API reference](https://github.com/Light-Projects/LightPacket) - package modules and protocol definitions.
 
 ## Project status
 
-LightPacket is an open-source project. The repository README identifies version 1.0.3 .
+LightPacket is an open-source project .
 
 The project’s capabilities and platform support continue to evolve. Check the documentation and issue tracker before relying on a particular protocol layer or live-capture backend in a production environment.
 
@@ -109,6 +115,6 @@ Bug reports, feature requests, and contributions are welcome. Please open an iss
 
 LightPacket is released under the [Mozilla Public License 2.0](LICENSE).
 
-## Author
+## Main Author
 
-**Adam Boulaaz** — [GitHub](https://github.com/adamboulaaz92-jpg)
+**Adam Boulaaz** - [GitHub](https://github.com/adamboulaaz92-jpg)

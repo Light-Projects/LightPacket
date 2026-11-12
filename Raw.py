@@ -72,7 +72,7 @@ class RawParser:
         lenght = len(raw)
 
         if verbose:
-            print(f"\n{BOLD}RAW LAYER : Len({PURPLE}{lenght}{RESET}) >")
+            print(f"\n{BOLD}RAW LAYER : {RESET}Len({PURPLE}{lenght}{RESET}) >")
             print(f'   {BLUE}PAYLOAD:{CYAN} {raw} {RESET}')
 
         raw = Raw(
@@ -143,7 +143,7 @@ class FragmentParser:
         lenght = len(raw)
 
         if verbose:
-            print(f"\n{BOLD}FRAGMENT LAYER : Len({PURPLE}{lenght}{RESET}) >")
+            print(f"\n{BOLD}FRAGMENT LAYER : {RESET}Len({PURPLE}{lenght}{RESET}) >")
             print(f'   {BLUE}PAYLOAD:{CYAN} {raw} {RESET}')
 
         raw = Fragment(

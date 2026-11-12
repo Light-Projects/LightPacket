@@ -159,3 +159,71 @@ ETHERTYPE_KEYWORDS = {
     "pppoe_sess":      0x8864,   # alias for "pppoes"
     "mpls_mcast":      0x8848,   # alias for "mpls_mc"
 }
+
+"""PPP Protocol Field assignments (RFC 1661, 1332, 5072, etc.).
+
+Used for matching PPP/PPPoE encapsulated payloads.
+"""
+
+PPP_PROTOCOLS = {
+    # --- Network Layer Protocols ---
+    "padding":              0x0001,   # RFC 1661
+    "rohc_small_cid":       0x0003,   # RFC 3095
+    "rohc_large_cid":       0x0005,   # RFC 3095
+    "ip":                   0x0021,   # RFC 1332 (Alias for IPv4)
+    "ipv4":                 0x0021,   # RFC 1332
+    "osi":                  0x0023,   # RFC 1377
+    "xerox_ns_idp":         0x0025,   # RFC 1764
+    "decnet":               0x0027,   # RFC 1762
+    "atalk":                0x0029,   # RFC 1378 (Alias for AppleTalk)
+    "appletalk":            0x0029,   # RFC 1378
+    "ipx":                  0x002b,   # RFC 1552 (Novell IPX)
+    "vj_tcpip_compressed":  0x002d,   # RFC 1332
+    "vj_tcpip_uncompressed":0x002f,   # RFC 1332
+    "bridging_pdu":         0x0031,   # RFC 3518
+    "st_ii":                0x0033,   # Stream Protocol (ST-II)
+    "banyan_vines":         0x0035,   # RFC 1763
+    "multilink":            0x003d,   # RFC 1990
+    "netbios":              0x003f,   # RFC 2097
+    "ip6":                  0x0057,   # RFC 5072 (Alias for IPv6)
+    "ipv6":                 0x0057,   # RFC 5072
+    "mpls":                 0x0281,   # RFC 3032 (Alias for MPLS Unicast)
+    "mpls_unicast":         0x0281,   # RFC 3032
+    "mpls_mc":              0x0283,   # RFC 3032 (Alias for MPLS Multicast)
+    "mpls_multicast":       0x0283,   # RFC 3032
+    "fibre_channel":        0x4025,
+
+    # --- Link Control & Network Control Protocols (LCP/NCP) ---
+    "lcp":                  0xc021,   # RFC 1661 (Link Control Protocol)
+    "lqr":                  0xc025,   # RFC 1661 (Link Quality Report)
+    "ipcp":                 0x8021,   # RFC 1332 (IP Control Protocol)
+    "ip6cp":                0x8057,   # RFC 5072 (IPv6 Control Protocol)
+    "mplscp":               0x8281,   # RFC 3032 (MPLS Control Protocol)
+    "ccp":                  0x80fd,   # RFC 1962 (Compression Control Protocol)
+
+    # --- Authentication Protocols ---
+    "pap":                  0xc023,   # RFC 1661 (Password Authentication)
+    "chap":                 0xc223,   # RFC 1661 (Challenge Handshake Auth)
+    "eap":                  0xc227,   # RFC 3748 (Extensible Authentication)
+    "rsa_auth":             0xc225,   # RSA Authentication Protocol
+
+    # --- Compression & Encryption ---
+    "encryption":           0x0053,   # RFC 1968
+    "individual_encryption":0x0055,   # RFC 1968
+    "ecp":                  0x8053,   # RFC 1968 (Encryption Control)
+    "stac_lzs":             0x4021,   # RFC 1974 (Stacker LZS)
+
+    # --- Discovery & Vendor Specific ---
+    "cdp":                  0x0207,   # Cisco Discovery Protocol
+    "edp":                  0x020d,   # Extreme Discovery Protocol
+    "lldp":                 0x0203,   # (Not standard PPP, but included in some refs)
+    "vsnp":                 0x005b,   # RFC 3772 (Vendor-Specific Network Protocol)
+    "vsncp":                0x805b,   # RFC 3772 (Vendor-Specific Net Control)
+    "vsap":                 0xc05b,   # RFC 3772 (Vendor-Specific Auth)
+
+    # --- Bridging / Spanning Tree ---
+    "802_1d_hello":         0x0201,   # RFC 3518
+    "dec_lanbridge100":     0x0205,   # RFC 3518
+    "trill":                0x005d,   # RFC 6361 (TRILL Network Protocol)
+    "trill_ncp":            0x805d,   # RFC 6361 (TRILL Network Control)
+}

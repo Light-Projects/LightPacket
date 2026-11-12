@@ -7,8 +7,8 @@ Standalone LightPacket L2Socket for Linux,BSD,MacOS and Unix systems (libpcap) â
 """
 import ctypes
 from ctypes import (
-    create_string_buffer, c_ubyte, c_int, c_char_p, c_uint, addressof,
-    c_void_p, byref, POINTER, c_ulong, c_ushort, c_uint32, Structure, cast
+    create_string_buffer, c_ubyte, c_ulong, c_uint, c_void_p, Structure, c_char_p, c_ushort, c_uint32,
+    byref, POINTER, c_int
 )
 from ctypes.util import find_library
 import sys
@@ -18,6 +18,7 @@ from typing import Optional
 from LightPacket.Interfaces.LibpcapInterfacesLin import get_default_interface_name_linux
 from LightPacket.Interfaces.UnixInterfaces import get_default_interface_bsd
 from LightPacket.Config import config
+from LightPacket.os_consts import OPENBSD, DARWIN
 
 if sys.platform == "darwin":
     pcap_path = find_library("pcap")
@@ -32,14 +33,30 @@ else:
         except OSError:
             raise RuntimeError("libpcap not found. Install with: sudo apt-get install libpcap-dev")
 
-
-class pcap_pkthdr(ctypes.Structure):
-    _fields_ = [
-        ('ts_sec', c_ulong),
-        ('ts_usec', c_ulong),
-        ('caplen', c_uint),
-        ('len', c_uint),
-    ]
+if OPENBSD:
+    class pcap_pkthdr(ctypes.Structure):
+        _fields_ = [
+            ('ts_sec',  ctypes.c_uint32),
+            ('ts_usec', ctypes.c_uint32),
+            ('caplen',  ctypes.c_uint32),
+            ('len',     ctypes.c_uint32),
+        ]
+elif DARWIN:
+    class pcap_pkthdr(ctypes.Structure):
+        _fields_ = [
+            ('ts_sec',  ctypes.c_long),
+            ('ts_usec', ctypes.c_int32),
+            ('caplen',  ctypes.c_uint32),
+            ('len',     ctypes.c_uint32),
+        ]
+else:
+    class pcap_pkthdr(ctypes.Structure):
+        _fields_ = [
+            ('ts_sec', c_ulong),
+            ('ts_usec',c_ulong),
+            ('caplen', c_uint),
+            ('len',    c_uint),
+        ]
 
 
 class bpf_program(ctypes.Structure):
@@ -311,10 +328,8 @@ class L2Socket:
 
             if ret == 1:
                 if header_ptr and data_ptr:
-                    length = header_ptr.contents.len
-                    data = bytearray(length)
-                    for i in range(length):
-                        data[i] = data_ptr[i]
+                    length = header_ptr.contents.caplen
+                    data = ctypes.string_at(data_ptr, length)
                     packets.append(bytes(data))
                     received += 1
 

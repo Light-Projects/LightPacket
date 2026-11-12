@@ -71,7 +71,7 @@ class BpfLexer:
         "host", "port", "net", "mask", "src", "dst", "portrange",
         "inbound", "outbound", "less", "greater", "gateway",
         "broadcast", "multicast", "proto", "protochain", "len",
-        "vlan", "mpls",
+        "vlan", "mpls", "pppoes"
     }
     LOGICAL_OPS = {"and", "or", "not"}
 
@@ -184,8 +184,8 @@ class BpfLexer:
             return Token('DLT', lw)
         if lw in self.PROTO_QUALIFIERS:
             return Token('IP-PROTOCOL', lw)
-        # vlan / mpls act as both keyword and ethertype; parser disambiguates
-        if lw in ("vlan", "mpls"):
+        # vlan / mpls / pppoes act as both keyword and ethertype; parser disambiguates
+        if lw in ("vlan", "mpls", "pppoes"):
             return Token('KEYWORD', lw)
         if lw in self.ETHERTYPE_KEYWORDS:
             return Token('ETHERTYPE', lw)

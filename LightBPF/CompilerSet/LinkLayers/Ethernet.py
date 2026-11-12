@@ -17,35 +17,66 @@ import struct
 import ipaddress
 from typing import Optional, Any, TYPE_CHECKING
 
-from LightPacket.LightBPF.CompilerSet.Instruction import Instruction
-from LightPacket.LightBPF.CompilerSet.Opcode import (
-    BPF_LD, BPF_LDX, BPF_ALU, BPF_JMP,
-    BPF_W, BPF_H, BPF_B, BPF_MISC, BPF_STX,
-    BPF_IMM, BPF_ABS, BPF_IND, BPF_MEM,
-    BPF_ADD, BPF_AND, BPF_RSH, BPF_TAX,
-    BPF_JA, BPF_JEQ, BPF_JGT, BPF_JGE, BPF_JSET,
-    BPF_K, BPF_X, BPF_MSH,
-)
-from LightPacket.LightBPF.Constants import (
-    DLT_EN10MB, IPV4_FRAG_MASK,
-    ETH_DST_OFF, ETH_SRC_OFF, ETH_TYPE_OFF, ETH_HLEN,
-    ETHERTYPE_IPV4, ETHERTYPE_IPV6,
-    ETHERTYPE_VLAN_8021Q, ETHERTYPE_VLAN_8021AD, ETHERTYPE_VLAN_9100,
-    ETHERTYPE_MPLS_UC, ETHERTYPE_MPLS_MC,
-    IPV4_PROTO_OFF, IPV4_FRAG_OFF, IPV4_SRC_OFF, IPV4_DST_OFF,
-    IPV6_PROTO_OFF, IPV6_SRC_OFF, IPV6_DST_OFF, IPV6_HLEN, IPV6_FRAG_NEXT_HDR_OFF,
-    IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_FRAGMENT,
-    IPV4_ONLY_PROTOCOLS, IPV6_ONLY_PROTOCOLS,
-    VLAN_VID_MASK, FIELD_OFFSETS, COMMON_SERVICES
-)
-from LightPacket.LightBPF.Ethertype import ETHERTYPE_KEYWORDS
-from LightPacket.LightBPF.CompilerSet.LinkLayers.BaseLinkType import BaseLinkType
+try:
+    from LightBPF.CompilerSet.Instruction import Instruction
+    from LightBPF.CompilerSet.Opcode import (
+        BPF_LD, BPF_LDX, BPF_ALU, BPF_JMP,
+        BPF_W, BPF_H, BPF_B, BPF_MISC, BPF_STX,
+        BPF_IMM, BPF_ABS, BPF_IND, BPF_MEM,
+        BPF_ADD, BPF_AND, BPF_RSH, BPF_TAX,
+        BPF_JA, BPF_JEQ, BPF_JGT, BPF_JGE, BPF_JSET,
+        BPF_K, BPF_X, BPF_MSH,
+    )
+    from LightBPF.Constants import (
+        DLT_EN10MB, IPV4_FRAG_MASK,
+        ETH_DST_OFF, ETH_SRC_OFF, ETH_TYPE_OFF, ETH_HLEN,
+        ETHERTYPE_IPV4, ETHERTYPE_IPV6, ETHERTYPE_PPPOE_SESS,
+        ETHERTYPE_VLAN_8021Q, ETHERTYPE_VLAN_8021AD, ETHERTYPE_VLAN_9100,
+        ETHERTYPE_MPLS_UC, ETHERTYPE_MPLS_MC,
+        IPV4_PROTO_OFF, IPV4_FRAG_OFF, IPV4_SRC_OFF, IPV4_DST_OFF,
+        IPV6_PROTO_OFF, IPV6_SRC_OFF, IPV6_DST_OFF, IPV6_HLEN, IPV6_FRAG_NEXT_HDR_OFF,
+        IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_FRAGMENT,
+        IPV4_ONLY_PROTOCOLS, IPV6_ONLY_PROTOCOLS,
+        VLAN_VID_MASK, FIELD_OFFSETS, COMMON_SERVICES, PPPOES_PROTO_OFF
+    )
+    from LightBPF.Ethertype import ETHERTYPE_KEYWORDS, PPP_PROTOCOLS
+    from LightBPF.CompilerSet.LinkLayers.BaseLinkType import BaseLinkType
+except:
+    from LightPacket.LightBPF.CompilerSet.Instruction import Instruction
+    from LightPacket.LightBPF.CompilerSet.Opcode import (
+        BPF_LD, BPF_LDX, BPF_ALU, BPF_JMP,
+        BPF_W, BPF_H, BPF_B, BPF_MISC, BPF_STX,
+        BPF_IMM, BPF_ABS, BPF_IND, BPF_MEM,
+        BPF_ADD, BPF_AND, BPF_RSH, BPF_TAX,
+        BPF_JA, BPF_JEQ, BPF_JGT, BPF_JGE, BPF_JSET,
+        BPF_K, BPF_X, BPF_MSH,
+    )
+    from LightPacket.LightBPF.Constants import (
+        DLT_EN10MB, IPV4_FRAG_MASK,
+        ETH_DST_OFF, ETH_SRC_OFF, ETH_TYPE_OFF, ETH_HLEN,
+        ETHERTYPE_IPV4, ETHERTYPE_IPV6, ETHERTYPE_PPPOE_SESS,
+        ETHERTYPE_VLAN_8021Q, ETHERTYPE_VLAN_8021AD, ETHERTYPE_VLAN_9100,
+        ETHERTYPE_MPLS_UC, ETHERTYPE_MPLS_MC,
+        IPV4_PROTO_OFF, IPV4_FRAG_OFF, IPV4_SRC_OFF, IPV4_DST_OFF,
+        IPV6_PROTO_OFF, IPV6_SRC_OFF, IPV6_DST_OFF, IPV6_HLEN, IPV6_FRAG_NEXT_HDR_OFF,
+        IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_FRAGMENT,
+        IPV4_ONLY_PROTOCOLS, IPV6_ONLY_PROTOCOLS,
+        VLAN_VID_MASK, FIELD_OFFSETS, COMMON_SERVICES, PPPOES_PROTO_OFF
+    )
+    from LightPacket.LightBPF.Ethertype import ETHERTYPE_KEYWORDS, PPP_PROTOCOLS
+    from LightPacket.LightBPF.CompilerSet.LinkLayers.BaseLinkType import BaseLinkType
 
 if TYPE_CHECKING:
-    from LightPacket.LightBPF.CompilerSet.Compiler import BpfCompilerNG
-    from LightPacket.LightBPF.Parser import (
-        ProtocolNode, KeywordFilterNode, ByteAccessNode, NumberNode, FieldNode
-    )
+    try:
+        from LightBPF.CompilerSet.Compiler import BpfCompilerNG
+        from LightBPF.Parser import (
+            ProtocolNode, KeywordFilterNode, ByteAccessNode
+        )
+    except:
+        from LightPacket.LightBPF.CompilerSet.Compiler import BpfCompilerNG
+        from LightPacket.LightBPF.Parser import (
+            ProtocolNode, KeywordFilterNode, ByteAccessNode
+        )
 
 
 class EthernetLinkType(BaseLinkType):
@@ -65,11 +96,18 @@ class EthernetLinkType(BaseLinkType):
         self.vlan_id_off = ETH_HLEN        # 14
         self.ipv4_proto_off = IPV4_PROTO_OFF # 23
         self.ipv6_proto_off = IPV6_PROTO_OFF # 20
+        self.ipv4_src_off = IPV4_SRC_OFF
+        self.ipv4_dst_off = IPV4_DST_OFF
+        self.pppoes_proto_off = PPPOES_PROTO_OFF # 20
         self.ipv4_h_st = ETH_HLEN          # 14
         self.ipv6_h_st = IPV6_PROTO_OFF    # 20
+        self.ipv6_src_off = IPV6_SRC_OFF
+        self.ipv6_dst_off = IPV6_DST_OFF
         self.ipv4_frag = IPV4_FRAG_OFF     # 20
         self.port_field_src = ETH_HLEN     # 14
         self.port_field_dst = 16
+        self.is_pppoe_active = False
+        self.eth_al = False
 
     # ------------------------------------------------------------------
     # Protocols
@@ -85,11 +123,35 @@ class EthernetLinkType(BaseLinkType):
 
         if name in ETHERTYPE_KEYWORDS:
             ethertype = ETHERTYPE_KEYWORDS[name]
-            emit(Instruction(BPF_LD | BPF_H | BPF_ABS, 0, 0, self.e_p_offset))
-            emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, true_target, false_target, ethertype))
+            if self.is_pppoe_active:
+                if name in ("ip", "ip4", "ipv4"):
+                    proto_val = 0x0021
+                elif name in ("ip6", "ipv6"):
+                    proto_val = 0x0057
+                elif name in PPP_PROTOCOLS:
+                    proto_val = PPP_PROTOCOLS[name]
+                else:
+                    proto_val = ethertype
 
-            if ethertype in (ETHERTYPE_IPV4, ETHERTYPE_IPV6):
-                self.compiler.explicit_ethertype = ethertype
+                emit(Instruction(BPF_LD | BPF_H | BPF_ABS, 0, 0, self.e_p_offset))
+                emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, true_target, false_target, proto_val))
+                if proto_val in (0x0021, 0x0057):
+                    self.compiler.explicit_ethertype = ETHERTYPE_IPV4 if proto_val == 0x0021 else ETHERTYPE_IPV6
+                    self.compiler.sip = True
+                self.compiler.parsed_upper = True
+                return
+
+            if not self.eth_al:
+                emit(Instruction(BPF_LD | BPF_H | BPF_ABS, 0, 0, self.e_p_offset))
+
+            emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, true_target, false_target, ethertype))
+            self.eth_al = True
+
+            if ethertype in (ETHERTYPE_IPV4, ETHERTYPE_IPV6, ETHERTYPE_PPPOE_SESS):
+                if self.compiler.explicit_ethertype is None:
+                    self.compiler.explicit_ethertype = ethertype
+                else:
+                    self.compiler.explicit_ethertype = 90909090909090
                 self.compiler.sip = True
             self.compiler.parsed_upper = True
             return
@@ -111,9 +173,15 @@ class EthernetLinkType(BaseLinkType):
             emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, true_target, false_target, ETHERTYPE_MPLS_MC))
             return
 
-        from LightPacket.LightBPF.Lexer import BpfLexer
+        try:
+            from LightBPF.Lexer import BpfLexer
+        except ImportError:
+            from LightPacket.LightBPF.Lexer import BpfLexer
+
         if name in BpfLexer.IP_PROTOCOLS:
             proto_num = BpfLexer.IP_PROTOCOLS[name]
+        elif name in PPP_PROTOCOLS and self.compiler.explicit_ethertype == ETHERTYPE_PPPOE_SESS:
+            proto_num = PPP_PROTOCOLS[name]
         elif node.proto_num is not None:
             proto_num = node.proto_num
         else:
@@ -143,8 +211,26 @@ class EthernetLinkType(BaseLinkType):
             self._compile_transport_ipv4(proto_num, true_target, false_target, with_x_offset=False)
         elif name in IPV6_ONLY_PROTOCOLS or self.compiler.explicit_ethertype == ETHERTYPE_IPV6:
             self._compile_transport_ipv6(proto_num, true_target, false_target, with_x_offset=False)
+        elif self.compiler.explicit_ethertype == ETHERTYPE_PPPOE_SESS:
+            self._compile_transport_pppoes(proto_num, true_target, false_target, with_x_offset=False)
         else:
             self._compile_dual_stack_transport(proto_num, true_target, false_target, with_x_offset=False)
+
+    def _compile_transport_pppoes(self, proto_num: int, true_target: str, false_target: str,
+                                with_x_offset: bool = False) -> None:
+        emit = self.compiler._emit
+        new_label = self.compiler._new_label
+
+        after_ether = new_label("pppoes_after_ether")
+        emit(Instruction(BPF_LD | BPF_H | BPF_ABS, 0, 0, self.e_p_offset))
+        emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, after_ether, false_target, ETHERTYPE_PPPOE_SESS))
+        self.compiler._emit_label(after_ether)
+
+        emit(Instruction(BPF_LD | BPF_B | BPF_ABS, 0, 0, self.pppoes_proto_off))
+
+        if not with_x_offset:
+            emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, true_target, false_target, proto_num))
+            return
 
     def _compile_transport_ipv4(self, proto_num: int, true_target: str, false_target: str,
                                 with_x_offset: bool = False) -> None:
@@ -152,9 +238,11 @@ class EthernetLinkType(BaseLinkType):
         new_label = self.compiler._new_label
 
         after_ether = new_label("ip4_after_ether")
-        emit(Instruction(BPF_LD | BPF_H | BPF_ABS, 0, 0, self.e_p_offset))
-        emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, after_ether, false_target, ETHERTYPE_IPV4))
-        self.compiler._emit_label(after_ether)
+
+        if not self.compiler.parsed_upper:
+            emit(Instruction(BPF_LD | BPF_H | BPF_ABS, 0, 0, self.e_p_offset))
+            emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, after_ether, false_target, ETHERTYPE_IPV4))
+            self.compiler._emit_label(after_ether)
 
         emit(Instruction(BPF_LD | BPF_B | BPF_ABS, 0, 0, self.ipv4_proto_off))
 
@@ -181,9 +269,11 @@ class EthernetLinkType(BaseLinkType):
         frag_ok = new_label("ip6_frag_ok")
         match_target = new_label("ip6_after_nh") if with_x_offset else true_target
 
-        emit(Instruction(BPF_LD | BPF_H | BPF_ABS, 0, 0, self.e_p_offset))
-        emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, after_ether, false_target, ETHERTYPE_IPV6))
-        self.compiler._emit_label(after_ether)
+        if not self.compiler.parsed_upper:
+            emit(Instruction(BPF_LD | BPF_H | BPF_ABS, 0, 0, self.e_p_offset))
+            emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, after_ether, false_target, ETHERTYPE_IPV6))
+            self.compiler._emit_label(after_ether)
+
         emit(Instruction(BPF_LD | BPF_B | BPF_ABS, 0, 0, self.ipv6_proto_off))
 
         emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, match_target, frag_check, proto_num))
@@ -208,8 +298,11 @@ class EthernetLinkType(BaseLinkType):
         ip4_match = true_target
         load_ip6 = new_label("ip6_load")
 
+        proto_v4 = 0x0021 if self.is_pppoe_active else ETHERTYPE_IPV4
+        proto_v6 = 0x0057 if self.is_pppoe_active else ETHERTYPE_IPV6
+
         emit(Instruction(BPF_LD | BPF_H | BPF_ABS, 0, 0, self.e_p_offset))
-        emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, check_ip4, check_ip6, ETHERTYPE_IPV4))
+        emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, check_ip4, check_ip6, proto_v4))
 
         # IPv4
         self.compiler._emit_label(check_ip4)
@@ -224,7 +317,7 @@ class EthernetLinkType(BaseLinkType):
 
         # IPv6
         self.compiler._emit_label(check_ip6)
-        emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, 0, false_target, ETHERTYPE_IPV6))
+        emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, 0, false_target, proto_v6))
         emit(Instruction(BPF_LD | BPF_B | BPF_ABS, 0, 0, self.ipv6_proto_off))
         emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, load_ip6, false_target, proto_num))
         self.compiler._emit_label(load_ip6)
@@ -245,24 +338,24 @@ class EthernetLinkType(BaseLinkType):
             emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, 0, false_target, ETHERTYPE_IPV4))
 
             if direction == "src":
-                emit(Instruction(BPF_LD | BPF_W | BPF_ABS, 0, 0, IPV4_SRC_OFF))
+                emit(Instruction(BPF_LD | BPF_W | BPF_ABS, 0, 0, self.ipv4_src_off))
                 emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, true_target, false_target, ip_int))
             elif direction == "dst":
-                emit(Instruction(BPF_LD | BPF_W | BPF_ABS, 0, 0, IPV4_DST_OFF))
+                emit(Instruction(BPF_LD | BPF_W | BPF_ABS, 0, 0, self.ipv4_dst_off))
                 emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, true_target, false_target, ip_int))
             elif direction == "src and dst":
                 chk = new_label("chk_dst")
-                emit(Instruction(BPF_LD | BPF_W | BPF_ABS, 0, 0, IPV4_SRC_OFF))
+                emit(Instruction(BPF_LD | BPF_W | BPF_ABS, 0, 0, self.ipv4_src_off))
                 emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, chk, false_target, ip_int))
                 self.compiler._emit_label(chk)
-                emit(Instruction(BPF_LD | BPF_W | BPF_ABS, 0, 0, IPV4_DST_OFF))
+                emit(Instruction(BPF_LD | BPF_W | BPF_ABS, 0, 0, self.ipv4_dst_off))
                 emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, true_target, false_target, ip_int))
             else:  # src or dst (default)
                 chk = new_label("chk_dst")
-                emit(Instruction(BPF_LD | BPF_W | BPF_ABS, 0, 0, IPV4_SRC_OFF))
+                emit(Instruction(BPF_LD | BPF_W | BPF_ABS, 0, 0, self.ipv4_src_off))
                 emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, true_target, chk, ip_int))
                 self.compiler._emit_label(chk)
-                emit(Instruction(BPF_LD | BPF_W | BPF_ABS, 0, 0, IPV4_DST_OFF))
+                emit(Instruction(BPF_LD | BPF_W | BPF_ABS, 0, 0, self.ipv4_dst_off))
                 emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, true_target, false_target, ip_int))
 
         elif vtype == "ipv6":
@@ -287,19 +380,19 @@ class EthernetLinkType(BaseLinkType):
                 emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, m_true, m_false, words[3]))
 
             if direction == "src":
-                match(IPV6_SRC_OFF, true_target, false_target)
+                match(self.ipv6_src_off, true_target, false_target)
             elif direction == "dst":
-                match(IPV6_DST_OFF, true_target, false_target)
+                match(self.ipv6_dst_off, true_target, false_target)
             elif direction == "src and dst":
                 chk = new_label("chk_dst")
-                match(IPV6_SRC_OFF, chk, false_target)
+                match(self.ipv6_src_off, chk, false_target)
                 self.compiler._emit_label(chk)
-                match(IPV6_DST_OFF, true_target, false_target)
+                match(self.ipv6_dst_off, true_target, false_target)
             else:
                 chk = new_label("chk_dst")
-                match(IPV6_SRC_OFF, true_target, chk)
+                match(self.ipv6_src_off, true_target, chk)
                 self.compiler._emit_label(chk)
-                match(IPV6_DST_OFF, true_target, false_target)
+                match(self.ipv6_dst_off, true_target, false_target)
 
         elif vtype == "mac":
             mac_clean = node.value.replace(":", "").replace("-", "")
@@ -335,7 +428,12 @@ class EthernetLinkType(BaseLinkType):
                 resolved = socket.gethostbyname(node.value)
             except OSError:
                 raise ValueError(f"Could not resolve host name: '{node.value}'")
-            from LightPacket.LightBPF.Parser import KeywordFilterNode
+
+            try:
+                from LightBPF.Parser import KeywordFilterNode
+            except ImportError:
+                from LightPacket.LightBPF.Parser import KeywordFilterNode
+
             clone = KeywordFilterNode(
                 keyword=node.keyword, value=resolved,
                 direction=node.direction, protocol=node.protocol,
@@ -367,8 +465,9 @@ class EthernetLinkType(BaseLinkType):
             net_int = int(net.network_address)
             mask_int = int(net.netmask)
 
-            emit(Instruction(BPF_LD | BPF_H | BPF_ABS, 0, 0, self.e_p_offset))
-            emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, 0, false_target, ETHERTYPE_IPV4))
+            if not self.compiler.parsed_upper:
+                emit(Instruction(BPF_LD | BPF_H | BPF_ABS, 0, 0, self.e_p_offset))
+                emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, 0, false_target, ETHERTYPE_IPV4))
 
             def match_net4(offset: int, m_true: str, m_false: str):
                 emit(Instruction(BPF_LD | BPF_W | BPF_ABS, 0, 0, offset))
@@ -377,27 +476,28 @@ class EthernetLinkType(BaseLinkType):
                 emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, m_true, m_false, net_int))
 
             if direction == "src":
-                match_net4(IPV4_SRC_OFF, true_target, false_target)
+                match_net4(self.ipv4_src_off, true_target, false_target)
             elif direction == "dst":
-                match_net4(IPV4_DST_OFF, true_target, false_target)
+                match_net4(self.ipv4_dst_off, true_target, false_target)
             elif direction == "src and dst":
                 chk = new_label("chk_dst")
-                match_net4(IPV4_SRC_OFF, chk, false_target)
+                match_net4(self.ipv4_src_off, chk, false_target)
                 self.compiler._emit_label(chk)
-                match_net4(IPV4_DST_OFF, true_target, false_target)
+                match_net4(self.ipv4_dst_off, true_target, false_target)
             else:
                 chk = new_label("chk_dst")
-                match_net4(IPV4_SRC_OFF, true_target, chk)
+                match_net4(self.ipv4_src_off, true_target, chk)
                 self.compiler._emit_label(chk)
-                match_net4(IPV4_DST_OFF, true_target, false_target)
+                match_net4(self.ipv4_dst_off, true_target, false_target)
 
         elif node.value_type == "cidr6":
             net6 = ipaddress.IPv6Network(node.value, strict=False)
             net_words = struct.unpack("!IIII", net6.network_address.packed)
             mask_words = struct.unpack("!IIII", net6.netmask.packed)
 
-            emit(Instruction(BPF_LD | BPF_H | BPF_ABS, 0, 0, self.e_p_offset))
-            emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, 0, false_target, ETHERTYPE_IPV6))
+            if not self.compiler.parsed_upper:
+                emit(Instruction(BPF_LD | BPF_H | BPF_ABS, 0, 0, self.e_p_offset))
+                emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, 0, false_target, ETHERTYPE_IPV6))
 
             def match_net6(base_off: int, m_true: str, m_false: str):
                 labels = [new_label(f"net6_w{i}") for i in range(3)]
@@ -415,19 +515,19 @@ class EthernetLinkType(BaseLinkType):
                         self.compiler._emit_label(labels[i])
 
             if direction == "src":
-                match_net6(IPV6_SRC_OFF, true_target, false_target)
+                match_net6(self.ipv6_src_off, true_target, false_target)
             elif direction == "dst":
-                match_net6(IPV6_DST_OFF, true_target, false_target)
+                match_net6(self.ipv6_dst_off, true_target, false_target)
             elif direction == "src and dst":
                 chk = new_label("chk_dst")
-                match_net6(IPV6_SRC_OFF, chk, false_target)
+                match_net6(self.ipv6_src_off, chk, false_target)
                 self.compiler._emit_label(chk)
-                match_net6(IPV6_DST_OFF, true_target, false_target)
+                match_net6(self.ipv6_dst_off, true_target, false_target)
             else:
                 chk = new_label("chk_dst")
-                match_net6(IPV6_SRC_OFF, true_target, chk)
+                match_net6(self.ipv6_src_off, true_target, chk)
                 self.compiler._emit_label(chk)
-                match_net6(IPV6_DST_OFF, true_target, false_target)
+                match_net6(self.ipv6_dst_off, true_target, false_target)
         else:
             raise NotImplementedError(f"Unsupported net type: '{node.value_type}'")
 
@@ -441,7 +541,7 @@ class EthernetLinkType(BaseLinkType):
         emit = self.compiler._emit
         new_label = self.compiler._new_label
 
-        if not self.compiler.sip:
+        if not self.compiler.sip or self.compiler.parsed_upper:
             self._setup_transport_layer(proto, false_target)
 
         if direction == "src":
@@ -510,7 +610,11 @@ class EthernetLinkType(BaseLinkType):
             raise ValueError(f"Unknown service or port: '{val}'")
 
     def _setup_transport_layer(self, proto: Optional[str], false_target: str) -> None:
-        from LightPacket.LightBPF.Lexer import BpfLexer
+        try:
+            from LightBPF.Lexer import BpfLexer
+        except ImportError:
+            from LightPacket.LightBPF.Lexer import BpfLexer
+
         proto_map = BpfLexer.IP_PROTOCOLS
         emit = self.compiler._emit
         new_label = self.compiler._new_label
@@ -562,7 +666,8 @@ class EthernetLinkType(BaseLinkType):
 
         if self.compiler.explicit_ethertype is None or self.compiler.explicit_ethertype == ETHERTYPE_IPV4:
             if not self.compiler.parsed_upper:
-                emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, check_ip4, check_ip6, ETHERTYPE_IPV4))
+                proto_expected = 0x0021 if self.is_pppoe_active else ETHERTYPE_IPV4
+                emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, check_ip4, check_ip6, proto_expected))
 
             self.compiler._emit_label(check_ip4)
             if num is not None:
@@ -574,7 +679,11 @@ class EthernetLinkType(BaseLinkType):
                     emit(Instruction(BPF_LD | BPF_B | BPF_ABS, 0, 0, self.ipv4_proto_off))
                     emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, ip4_ok, is_udp, 6)) # TCP
                     self.compiler._emit_label(is_udp)
-                    emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, ip4_ok, false_target, 17)) # UDP
+                    is_sctp = new_label("is_sctp")
+                    emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, ip4_ok, is_sctp, 17)) # UDP
+                    self.compiler._emit_label(is_sctp)
+                    emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, ip4_ok, false_target, 132)) # SCTP
+
             self.compiler._emit_label(ip4_ok)
             first_frag = new_label("first_frag")
             emit(Instruction(BPF_LD | BPF_H | BPF_ABS, 0, 0, self.ipv4_frag))
@@ -586,7 +695,8 @@ class EthernetLinkType(BaseLinkType):
         if self.compiler.explicit_ethertype is None or self.compiler.explicit_ethertype == ETHERTYPE_IPV6:
             self.compiler._emit_label(check_ip6)
             if not self.compiler.parsed_upper:
-                emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, 0, false_target, ETHERTYPE_IPV6))
+                proto_ip6 = 0x0057 if self.is_pppoe_active else ETHERTYPE_IPV6
+                emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, 0, false_target, proto_ip6))
 
             if num is not None:
                 emit(Instruction(BPF_LD | BPF_B | BPF_ABS, 0, 0, self.ipv6_h_st))
@@ -597,7 +707,10 @@ class EthernetLinkType(BaseLinkType):
                     emit(Instruction(BPF_LD | BPF_B | BPF_ABS, 0, 0, self.ipv6_h_st))
                     emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, ip6_ok, is_udp6, 6))
                     self.compiler._emit_label(is_udp6)
-                    emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, ip6_ok, false_target, 17))
+                    is_sctp6 = new_label("is_sctp6")
+                    emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, ip6_ok, is_sctp6, 17))
+                    self.compiler._emit_label(is_sctp6)
+                    emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, ip6_ok, false_target, 132))
 
             self.compiler._emit_label(ip6_ok)
             emit(Instruction(BPF_LDX | BPF_IMM, 0, 0, IPV6_HLEN))
@@ -622,67 +735,6 @@ class EthernetLinkType(BaseLinkType):
         # In Ethernet, the least significant bit of the first byte of dst MAC indicates multicast
         emit(Instruction(BPF_LD | BPF_B | BPF_ABS, 0, 0, ETH_DST_OFF))
         emit(Instruction(BPF_JMP | BPF_JSET | BPF_K, true_target, false_target, 0x01))
-
-    # ------------------------------------------------------------------
-    # Inbound & Outbound using LightPacket Address Discovery
-    # ------------------------------------------------------------------
-    def _resolve_host_mac(self) -> str:
-        """Fetch local host MAC via LightPacket utilities or compiler configuration."""
-        if self.compiler.host_mac:
-            return self.compiler.host_mac
-
-        interface = self.compiler.interface
-        mac = None
-        try:
-            if interface:
-                from LightPacket.GetMac import GetMacByInt
-                mac = GetMacByInt(interface)
-            else:
-                from LightPacket.GetMac import GetMac
-                mac = GetMac()
-        except Exception:
-            mac = None
-
-        if not mac or mac == "00:00:00:00:00:00":
-            # If default interface resolution fails, try reading active linux interfaces
-            try:
-                from LightPacket.Interfaces.LinuxInterfaces import SimpleInterfaces
-                ifaces = SimpleInterfaces()
-                for ifname, ifinfo in ifaces.items():
-                    if not ifname.startswith("lo"):
-                        from LightPacket.GetMac import GetMacByInt
-                        candidate = GetMacByInt(ifname)
-                        if candidate and candidate != "00:00:00:00:00:00":
-                            mac = candidate
-                            break
-            except Exception:
-                pass
-
-        if not mac or mac == "00:00:00:00:00:00":
-            # Fall back to zero mac or inform user if unresolvable
-            mac = "00:00:00:00:00:00"
-
-        return mac
-
-    def compile_inbound(self, true_target: str, false_target: str) -> None:
-        """Inbound Ethernet traffic: destination MAC address equals the host's MAC address."""
-        host_mac = self._resolve_host_mac()
-        from LightPacket.LightBPF.Parser import KeywordFilterNode
-        node = KeywordFilterNode(
-            keyword="host", value=host_mac, direction="dst",
-            protocol="ether", value_type="mac"
-        )
-        self.compile_host(node, true_target, false_target)
-
-    def compile_outbound(self, true_target: str, false_target: str) -> None:
-        """Outbound Ethernet traffic: source MAC address equals the host's MAC address."""
-        host_mac = self._resolve_host_mac()
-        from LightPacket.LightBPF.Parser import KeywordFilterNode
-        node = KeywordFilterNode(
-            keyword="host", value=host_mac, direction="src",
-            protocol="ether", value_type="mac"
-        )
-        self.compile_host(node, true_target, false_target)
 
     # ------------------------------------------------------------------
     # Proto, VLAN & MPLS
@@ -749,6 +801,10 @@ class EthernetLinkType(BaseLinkType):
         self.e_p_offset += 4
         self.ipv4_frag += 4
         self.ipv4_proto_off += 4
+        self.ipv4_dst_off += 4
+        self.ipv4_src_off += 4
+        self.ipv6_src_off += 4
+        self.ipv6_dst_off += 4
         self.ipv4_h_st += 4
         self.ipv6_h_st += 4
         self.ipv6_proto_off += 4
@@ -777,6 +833,8 @@ class EthernetLinkType(BaseLinkType):
         self.e_p_offset += 4
         self.ipv4_frag += 4
         self.ipv4_proto_off += 4
+        self.ipv4_dst_off += 4
+        self.ipv4_src_off += 4
 
         emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, ok, false_target, ETHERTYPE_MPLS_UC))
         self.compiler._emit_label(ok)
@@ -788,12 +846,49 @@ class EthernetLinkType(BaseLinkType):
         else:
             emit(Instruction(BPF_JMP | BPF_JA, 0, 0, true_target))
 
+    def compile_pppoes(self, node: "KeywordFilterNode", true_target: str, false_target: str) -> None:
+        emit = self.compiler._emit
+        ok = self.compiler._new_label("pppoes_ok")
+        emit(Instruction(BPF_LD | BPF_H | BPF_ABS, 0, 0, self.e_p_offset))
+        emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, ok, false_target, ETHERTYPE_PPPOE_SESS))
+        self.compiler._emit_label(ok)
+
+        # Check session ID if specified (offset e_p_offset + 4 is Session ID in PPPoE header)
+        if node.value is not None:
+            sess_id = int(node.value)
+            sess_offset = self.e_p_offset + 4
+            emit(Instruction(BPF_LD | BPF_H | BPF_ABS, 0, 0, sess_offset))
+            emit(Instruction(BPF_JMP | BPF_JEQ | BPF_K, true_target, false_target, sess_id))
+        else:
+            emit(Instruction(BPF_JMP | BPF_JA, 0, 0, true_target))
+
+        # Shift offsets past PPPoE (6 bytes) + PPP Protocol (2 bytes) = 8 bytes
+        PPPOES_SHIFT = 8
+        self.e_p_offset += PPPOES_SHIFT
+        self.ipv4_frag += PPPOES_SHIFT
+        self.ipv4_proto_off += PPPOES_SHIFT
+        self.ipv4_h_st += PPPOES_SHIFT
+        self.ipv6_h_st += PPPOES_SHIFT
+        self.ipv6_proto_off += PPPOES_SHIFT
+        self.port_field_src += PPPOES_SHIFT
+        self.port_field_dst += PPPOES_SHIFT
+        self.pppoes_proto_off += PPPOES_SHIFT
+        self.ipv4_dst_off += PPPOES_SHIFT
+        self.ipv4_src_off += PPPOES_SHIFT
+        self.ipv6_src_off += PPPOES_SHIFT
+        self.ipv6_dst_off += PPPOES_SHIFT
+        self.is_pppoe_active = True
+
     # ------------------------------------------------------------------
     # Byte Access
     # ------------------------------------------------------------------
     def compile_byte_access(self, node: "ByteAccessNode", false_target: str) -> None:
-        from LightPacket.LightBPF.Parser import NumberNode, FieldNode
-        from LightPacket.LightBPF.Lexer import BpfLexer
+        try:
+            from LightBPF.Parser import NumberNode, FieldNode
+            from LightBPF.Lexer import BpfLexer
+        except ImportError:
+            from LightPacket.LightBPF.Parser import NumberNode, FieldNode
+            from LightPacket.LightBPF.Lexer import BpfLexer
 
         size_flag = BPF_B if node.size == 1 else (BPF_H if node.size == 2 else BPF_W)
         proto = node.protocol.lower()
@@ -871,3 +966,17 @@ class EthernetLinkType(BaseLinkType):
             return
 
         raise NotImplementedError(f"Unsupported byte access protocol: '{proto}'")
+
+    def save_state(self) -> tuple:
+        return (
+            self.e_p_offset, self.vlan_id_off, self.ipv4_proto_off,
+            self.ipv6_proto_off, self.pppoes_proto_off, self.ipv4_h_st,
+            self.ipv6_h_st, self.ipv4_frag, self.port_field_src,
+            self.port_field_dst, self.is_pppoe_active, self.eth_al
+        )
+
+    def restore_state(self, state: tuple) -> None:
+        (self.e_p_offset, self.vlan_id_off, self.ipv4_proto_off,
+         self.ipv6_proto_off, self.pppoes_proto_off, self.ipv4_h_st,
+         self.ipv6_h_st, self.ipv4_frag, self.port_field_src,
+         self.port_field_dst, self.is_pppoe_active, self.eth_al) = state

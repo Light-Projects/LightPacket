@@ -31,21 +31,21 @@ from LightPacket.LightBPF.CompilerSet.LinkLayers.BaseLinkType import BaseLinkTyp
 from LightPacket.LightBPF.CompilerSet.LinkLayers.Ethernet import EthernetLinkType
 
 try:
-    from LightPacket.LightBPF.Lexer import BpfLexer
-    from LightPacket.LightBPF.Parser import (
+    from LightBPF.Lexer import BpfLexer
+    from LightBPF.Parser import (
         BpfParser, ASTNode, BinaryOpNode, UnaryOpNode, ProtocolNode,
         KeywordFilterNode, ByteAccessNode, LengthNode, NumberNode,
         LiteralNode, FieldNode,
     )
-    from LightPacket.LightBPF.Ethertype import ETHERTYPE_KEYWORDS
+    from LightBPF.Ethertype import ETHERTYPE_KEYWORDS
 except ImportError:
-    from LightBPF.Lexer import BpfLexer          # type: ignore
-    from LightBPF.Parser import (                 # type: ignore
+    from LightPacket.LightBPF.Lexer import BpfLexer          # type: ignore
+    from LightPacket.LightBPF.Parser import (                 # type: ignore
         BpfParser, ASTNode, BinaryOpNode, UnaryOpNode, ProtocolNode,
         KeywordFilterNode, ByteAccessNode, LengthNode, NumberNode,
-        LiteralNode, FieldNode,
+        LiteralNode, FieldNode
     )
-    from LightBPF.Ethertype import ETHERTYPE_KEYWORDS  # type: ignore
+    from LightPacket.LightBPF.Ethertype import ETHERTYPE_KEYWORDS  # type: ignore
 
 
 class BpfCompilerNG:
@@ -69,6 +69,7 @@ class BpfCompilerNG:
         self._label_counter = 0
         self._scratch_counter = 0
         self.parsed_upper = False
+        self.eth_al = False
         self.explicit_ethertype: Optional[int] = None
         self.sip = False
         self.linktype = linktype
@@ -119,6 +120,8 @@ class BpfCompilerNG:
         if host_ip is not None:
             self.host_ip = host_ip
 
+        if optimize:
+            ast_root = self._optimize_ast(ast_root)
         self.link_handler.reset()
 
         self._compile_bool(ast_root, "ACCEPT", "REJECT")
@@ -167,6 +170,24 @@ class BpfCompilerNG:
         if self._scratch_counter > 0:
             self._scratch_counter -= 1
 
+    def _save_compiler_state(self) -> tuple:
+        return (
+            self.link_handler.save_state(),
+            self.parsed_upper,
+            self.explicit_ethertype,
+            self.sip,
+            self._scratch_counter,
+            self.eth_al  # <--- ADD THIS
+        )
+
+    def _restore_compiler_state(self, state: tuple) -> None:
+        self.link_handler.restore_state(state[0])
+        self.parsed_upper = state[1]
+        self.explicit_ethertype = state[2]
+        self.sip = state[3]
+        self._scratch_counter = state[4]
+        self.eth_al = state[5]  # <--- ADD THIS
+
     # ------------------------------------------------------------------
     # Boolean expressions
     # ------------------------------------------------------------------
@@ -177,11 +198,21 @@ class BpfCompilerNG:
                 self._compile_bool(node.left, nxt, false_target)
                 self._emit_label(nxt)
                 self._compile_bool(node.right, true_target, false_target)
+
             elif node.op == "or":
                 nxt = self._new_label("or")
+
+                # SAVE STATE
+                saved_state = self._save_compiler_state()
                 self._compile_bool(node.left, true_target, nxt)
                 self._emit_label(nxt)
+                # RESTORE STATE BEFORE RIGHT BRANCH
+                self._restore_compiler_state(saved_state)
                 self._compile_bool(node.right, true_target, false_target)
+
+                # RESTORE STATE AFTER THE OR BLOCK
+                self._restore_compiler_state(saved_state)
+
             elif node.op in ("==", "!=", ">", ">=", "<", "<="):
                 self._compile_comparison(node, true_target, false_target)
             elif node.op == "&":
@@ -318,6 +349,8 @@ class BpfCompilerNG:
             self.link_handler.compile_vlan(node, true_target, false_target)
         elif kw == "mpls":
             self.link_handler.compile_mpls(node, true_target, false_target)
+        elif kw == "pppoes":
+            self.link_handler.compile_pppoes(node, true_target, false_target)
         elif kw == "inbound":
             self.link_handler.compile_inbound(true_target, false_target)
         elif kw == "outbound":
@@ -448,6 +481,69 @@ class BpfCompilerNG:
                     )
         return clean
 
+    def _is_dual_stack_ip(self, node: ASTNode) -> bool:
+        """Returns True ONLY if the node is exactly `(ip or ip6)` or `(ip6 or ip)`."""
+        if isinstance(node, BinaryOpNode) and node.op == "or":
+            left = node.left.name.lower() if isinstance(node.left, ProtocolNode) else ""
+            right = node.right.name.lower() if isinstance(node.right, ProtocolNode) else ""
+
+            ip_names = ("ip", "ip4", "ipv4")
+            ip6_names = ("ip6", "ipv6")
+
+            return (left in ip_names and right in ip6_names) or \
+                (left in ip6_names and right in ip_names)
+        return False
+
+    def _enforces_ip(self, node: ASTNode) -> bool:
+        """Returns True if the node inherently checks for IPv4 or IPv6."""
+        if isinstance(node, ProtocolNode):
+            if node.name.lower() in BpfLexer.IP_PROTOCOLS:
+                return True
+        if isinstance(node, KeywordFilterNode):
+            if node.keyword in ("port", "portrange"):
+                return True
+            if node.keyword in ("host", "net") and node.value_type in ("ipv4", "ipv6", "cidr4", "cidr6"):
+                return True
+        if isinstance(node, BinaryOpNode):
+            if node.op == "and":
+                return self._enforces_ip(node.left) or self._enforces_ip(node.right)
+            if node.op == "or":
+                return self._enforces_ip(node.left) and self._enforces_ip(node.right)
+        return False
+
+    def _flatten_and(self, node: ASTNode, conditions: list) -> None:
+        """Recursively flatten nested AND nodes into a single list."""
+        if isinstance(node, BinaryOpNode) and node.op == "and":
+            self._flatten_and(node.left, conditions)
+            self._flatten_and(node.right, conditions)
+        else:
+            conditions.append(node)
+
+    def _optimize_ast(self, node: ASTNode) -> ASTNode:
+        """Recursively optimize the AST to remove redundant logical checks."""
+        if isinstance(node, BinaryOpNode):
+            node.left = self._optimize_ast(node.left)
+            node.right = self._optimize_ast(node.right)
+
+            if node.op == "and":
+                conditions = []
+                self._flatten_and(node, conditions)
+
+                # Check if we have a dual-stack check AND an IP enforcer
+                has_dual_stack = any(self._is_dual_stack_ip(c) for c in conditions)
+                has_enforcer = any(self._enforces_ip(c) for c in conditions)
+
+                if has_dual_stack and has_enforcer:
+                    # Drop the redundant (ip or ip6) check
+                    conditions = [c for c in conditions if not self._is_dual_stack_ip(c)]
+
+                # Rebuild the AND tree
+                new_node = conditions[0]
+                for c in conditions[1:]:
+                    new_node = BinaryOpNode(new_node, "and", c)
+                return new_node
+
+        return node
 
 # Alias for backward-compatible naming
 BpfCompiler = BpfCompilerNG

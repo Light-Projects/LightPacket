@@ -267,7 +267,7 @@ class BpfParser:
             return KeywordFilterNode(keyword, t.value, direction, protocol,
                                      'number' if t.type == 'NUMBER' else 'name')
 
-        if keyword == 'vlan' or keyword == 'mpls':
+        if keyword in ('vlan', 'mpls', 'pppoes'):
             if self._is('NUMBER'):
                 return KeywordFilterNode(keyword, int(self.advance().value), direction, protocol, 'number')
             return KeywordFilterNode(keyword, None, direction, protocol)

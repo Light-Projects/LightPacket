@@ -4,15 +4,26 @@
 
 """CompilerSet exports for LightBPF."""
 
-from LightPacket.LightBPF.CompilerSet.Compiler import BpfCompilerNG, BpfCompiler
-from LightPacket.LightBPF.CompilerSet.Instruction import Instruction
-from LightPacket.LightBPF.CompilerSet.Opcode import *
-from LightPacket.LightBPF.CompilerSet.Disassembler import disassemble, c_str_style
-from LightPacket.LightBPF.CompilerSet.Emulator import BpfEmulator
-from LightPacket.LightBPF.CompilerSet.Fprog import to_fprog, bpf_insn, sock_fprog
-from LightPacket.LightBPF.CompilerSet import Peephole
-from LightPacket.LightBPF.CompilerSet import Shortcut
-from LightPacket.LightBPF.CompilerSet.LinkLayers import BaseLinkType, EthernetLinkType
+try:
+    from LightBPF.CompilerSet.Compiler import BpfCompilerNG, BpfCompiler
+    from LightBPF.CompilerSet.Instruction import Instruction
+    from LightBPF.CompilerSet.Opcode import *
+    from LightBPF.CompilerSet.Disassembler import disassemble, c_str_style
+    from LightBPF.CompilerSet.Emulator import BpfEmulator
+    from LightBPF.CompilerSet.Fprog import to_fprog, bpf_insn, sock_fprog
+    from LightBPF.CompilerSet import Peephole
+    from LightBPF.CompilerSet import Shortcut
+    from LightBPF.CompilerSet.LinkLayers import BaseLinkType, EthernetLinkType
+except:
+    from LightPacket.LightBPF.CompilerSet.Compiler import BpfCompilerNG, BpfCompiler
+    from LightPacket.LightBPF.CompilerSet.Instruction import Instruction
+    from LightPacket.LightBPF.CompilerSet.Opcode import *
+    from LightPacket.LightBPF.CompilerSet.Disassembler import disassemble, c_str_style
+    from LightPacket.LightBPF.CompilerSet.Emulator import BpfEmulator
+    from LightPacket.LightBPF.CompilerSet.Fprog import to_fprog, bpf_insn, sock_fprog
+    from LightPacket.LightBPF.CompilerSet import Peephole
+    from LightPacket.LightBPF.CompilerSet import Shortcut
+    from LightPacket.LightBPF.CompilerSet.LinkLayers import BaseLinkType, EthernetLinkType
 
 __all__ = [
     "BpfCompilerNG",

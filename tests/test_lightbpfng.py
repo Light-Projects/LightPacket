@@ -35,29 +35,52 @@ import pytest
 # Edit HERE if your layout is different.
 # ---------------------------------------------------------------------------
 
-from LightPacket.LightBPF.Lexer import BpfLexer, Token
-from LightPacket.LightBPF.Parser import (
-    BpfParser, ASTNode, BinaryOpNode, UnaryOpNode,
-    ProtocolNode, KeywordFilterNode, ByteAccessNode,
-    LengthNode, NumberNode, LiteralNode, FieldNode,
-)
-from LightPacket.LightBPF.CompilerSet.Compiler import BpfCompilerNG as BpfCompiler, BpfCompilerNG
-from LightPacket.LightBPF.CompilerSet.Emulator import BpfEmulator
-from LightPacket.LightBPF.CompilerSet.Instruction import Instruction
-from LightPacket.LightBPF.CompilerSet.Disassembler import disassemble, c_str_style
-from LightPacket.LightBPF.CompilerSet.Fprog import to_fprog, bpf_insn, sock_fprog
-from LightPacket.LightBPF.CompilerSet.Opcode import (
-    BPF_LD, BPF_LDX, BPF_ST, BPF_STX, BPF_ALU, BPF_JMP, BPF_RET, BPF_MISC,
-    BPF_W, BPF_H, BPF_B,
-    BPF_IMM, BPF_ABS, BPF_IND, BPF_MEM, BPF_LEN, BPF_MSH,
-    BPF_ADD, BPF_SUB, BPF_MUL, BPF_DIV, BPF_OR, BPF_AND, BPF_LSH, BPF_RSH,
-    BPF_NEG, BPF_MOD, BPF_XOR,
-    BPF_JA, BPF_JEQ, BPF_JGT, BPF_JGE, BPF_JSET,
-    BPF_K, BPF_X, BPF_TAX, BPF_TXA, BPF_A, BPF_MAX_BUF_LEN,
-    insn_class, insn_size, insn_mode, insn_op, insn_src,
-)
-from LightPacket.LightBPF.CompilerSet import Peephole
-
+try:
+    from LightPacket.LightBPF.Lexer import BpfLexer, Token
+    from LightPacket.LightBPF.Parser import (
+        BpfParser, BinaryOpNode, UnaryOpNode,
+        ProtocolNode, KeywordFilterNode, ByteAccessNode,
+        LengthNode
+    )
+    from LightPacket.LightBPF.CompilerSet.Compiler import BpfCompilerNG as BpfCompiler, BpfCompilerNG
+    from LightPacket.LightBPF.CompilerSet.Emulator import BpfEmulator
+    from LightPacket.LightBPF.CompilerSet.Instruction import Instruction
+    from LightPacket.LightBPF.CompilerSet.Disassembler import disassemble, c_str_style
+    from LightPacket.LightBPF.CompilerSet.Fprog import to_fprog, bpf_insn, sock_fprog
+    from LightPacket.LightBPF.CompilerSet.Opcode import (
+        BPF_LD, BPF_LDX, BPF_ST, BPF_STX, BPF_ALU, BPF_JMP, BPF_RET, BPF_MISC,
+        BPF_W, BPF_H,
+        BPF_IMM, BPF_ABS,
+        BPF_ADD, BPF_SUB, BPF_MUL, BPF_DIV, BPF_OR, BPF_AND, BPF_LSH, BPF_RSH,
+        BPF_NEG, BPF_MOD, BPF_XOR,
+        BPF_JA, BPF_JEQ, BPF_JGT, BPF_JGE, BPF_JSET,
+        BPF_K, BPF_X, BPF_A, BPF_MAX_BUF_LEN,
+        insn_class, insn_size, insn_mode, insn_op, insn_src,
+    )
+    from LightPacket.LightBPF.CompilerSet import Peephole
+except:
+    from LightBPF.Lexer import BpfLexer, Token
+    from LightBPF.Parser import (
+        BpfParser, BinaryOpNode, UnaryOpNode,
+        ProtocolNode, KeywordFilterNode, ByteAccessNode,
+        LengthNode
+    )
+    from LightBPF.CompilerSet.Compiler import BpfCompilerNG as BpfCompiler, BpfCompilerNG
+    from LightBPF.CompilerSet.Emulator import BpfEmulator
+    from LightBPF.CompilerSet.Instruction import Instruction
+    from LightBPF.CompilerSet.Disassembler import disassemble, c_str_style
+    from LightBPF.CompilerSet.Fprog import to_fprog, bpf_insn, sock_fprog
+    from LightBPF.CompilerSet.Opcode import (
+        BPF_LD, BPF_LDX, BPF_ST, BPF_STX, BPF_ALU, BPF_JMP, BPF_RET, BPF_MISC,
+        BPF_W, BPF_H,
+        BPF_IMM, BPF_ABS,
+        BPF_ADD, BPF_SUB, BPF_MUL, BPF_DIV, BPF_OR, BPF_AND, BPF_LSH, BPF_RSH,
+        BPF_NEG, BPF_MOD, BPF_XOR,
+        BPF_JA, BPF_JEQ, BPF_JGT, BPF_JGE, BPF_JSET,
+        BPF_K, BPF_X, BPF_A, BPF_MAX_BUF_LEN,
+        insn_class, insn_size, insn_mode, insn_op, insn_src,
+    )
+    from LightBPF.CompilerSet import Peephole
 
 # ===========================================================================
 # Packet helpers
@@ -937,47 +960,6 @@ class TestEmulator:
 # ===========================================================================
 
 class TestLightBPFFeatures:
-    def test_inbound_filter_with_host_mac(self):
-        host_mac = "11:22:33:44:55:66"
-        other_mac = "aa:bb:cc:dd:ee:ff"
-        code = BpfCompilerNG.compile_str("inbound", host_mac=host_mac)
-
-        # Inbound packet: destination MAC == host_mac
-        inbound_pkt = bytes.fromhex(host_mac.replace(":", "")) + bytes.fromhex(other_mac.replace(":", "")) + struct.pack("!H", 0x0800) + bytes(20)
-        assert BpfEmulator.execute(code, inbound_pkt) > 0
-
-        # Outbound packet: destination MAC != host_mac (e.g. host_mac is src)
-        outbound_pkt = bytes.fromhex(other_mac.replace(":", "")) + bytes.fromhex(host_mac.replace(":", "")) + struct.pack("!H", 0x0800) + bytes(20)
-        assert BpfEmulator.execute(code, outbound_pkt) == 0
-
-    def test_outbound_filter_with_host_mac(self):
-        host_mac = "11:22:33:44:55:66"
-        other_mac = "aa:bb:cc:dd:ee:ff"
-        code = BpfCompilerNG.compile_str("outbound", host_mac=host_mac)
-
-        # Outbound packet: source MAC == host_mac
-        outbound_pkt = bytes.fromhex(other_mac.replace(":", "")) + bytes.fromhex(host_mac.replace(":", "")) + struct.pack("!H", 0x0800) + bytes(20)
-        assert BpfEmulator.execute(code, outbound_pkt) > 0
-
-        # Inbound packet: source MAC != host_mac
-        inbound_pkt = bytes.fromhex(host_mac.replace(":", "")) + bytes.fromhex(other_mac.replace(":", "")) + struct.pack("!H", 0x0800) + bytes(20)
-        assert BpfEmulator.execute(code, inbound_pkt) == 0
-
-    def test_inbound_combined_with_ip_and_port(self):
-        host_mac = "11:22:33:44:55:66"
-        code = BpfCompilerNG.compile_str("inbound and tcp and port 80", host_mac=host_mac)
-
-        # Matching packet
-        matching = bytes.fromhex(host_mac.replace(":", "")) + bytes(6) + struct.pack("!H", 0x0800)
-        ip = struct.pack("!BBHHHBBH4s4s", 0x45, 0, 40, 0, 0, 64, 6, 0, socket.inet_aton("1.2.3.4"), socket.inet_aton("5.6.7.8"))
-        tcp = struct.pack("!HHIIBBHHH", 1234, 80, 0, 0, 0x50, 2, 65535, 0, 0)
-        pkt = matching + ip + tcp
-        assert BpfEmulator.execute(code, pkt) > 0
-
-        # Wrong port
-        tcp_wrong = struct.pack("!HHIIBBHHH", 1234, 81, 0, 0, 0x50, 2, 65535, 0, 0)
-        assert BpfEmulator.execute(code, matching + ip + tcp_wrong) == 0
-
     def test_custom_linktype_registration(self):
         from LightPacket.LightBPF.CompilerSet.LinkLayers.BaseLinkType import BaseLinkType
         from LightPacket.LightBPF.CompilerSet.Instruction import Instruction
@@ -1001,6 +983,8 @@ class TestLightBPFFeatures:
             def compile_vlan(self, node, true_target, false_target): pass
             def compile_mpls(self, node, true_target, false_target): pass
             def compile_byte_access(self, node, false_target): pass
+            def restore_state(self, state: tuple) -> None:pass
+            def save_state(self) -> tuple: pass
 
         BpfCompilerNG.register_link_type(12, DummyRawLinkType)
         compiler = BpfCompilerNG(linktype=12)

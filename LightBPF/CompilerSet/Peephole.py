@@ -171,13 +171,18 @@ def _eliminate_dead_code(code: List[Instruction]) -> List[Instruction]:
         reachable[pc] = True
         insn = code[pc]
         cls = insn_class(insn.code)
+
         if cls == BPF_JMP:
             if insn_op(insn.code) == BPF_JA:
                 stack.append(pc + 1 + insn.k)
             else:
-                stack.append(pc + 1 + insn.jt)
-                stack.append(pc + 1 + insn.jf)
-                stack.append(pc + 1)
+                if insn.jt > 0:
+                    stack.append(pc + 1 + insn.jt)
+                if insn.jf > 0:
+                    stack.append(pc + 1 + insn.jf)
+                # Only fall through if jt or jf is 0
+                if insn.jt == 0 or insn.jf == 0:
+                    stack.append(pc + 1)
         elif cls == BPF_RET:
             continue  # terminal
         else:

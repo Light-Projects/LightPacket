@@ -120,6 +120,7 @@ def get_bpf_device_struct(bp: bpf_program):
         struct bpf_program { u_int bf_len; struct bpf_insn *bf_insns; }
 
     """
+
     if bp is None:
         return None
 

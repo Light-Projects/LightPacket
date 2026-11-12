@@ -10,14 +10,19 @@ network, and transport layer filters.
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional, TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from LightPacket.LightBPF.CompilerSet.Compiler import BpfCompilerNG
-    from LightPacket.LightBPF.Parser import (
-        ProtocolNode, KeywordFilterNode, ByteAccessNode
-    )
-
+    try:
+        from LightBPF.CompilerSet.Compiler import BpfCompilerNG
+        from LightBPF.Parser import (
+            ProtocolNode, KeywordFilterNode, ByteAccessNode
+        )
+    except:
+        from LightPacket.LightBPF.CompilerSet.Compiler import BpfCompilerNG
+        from LightPacket.LightBPF.Parser import (
+            ProtocolNode, KeywordFilterNode, ByteAccessNode
+        )
 
 class BaseLinkType(ABC):
     """Abstract interface for a specific data link type (DLT)."""
@@ -69,16 +74,6 @@ class BaseLinkType(ABC):
         pass
 
     @abstractmethod
-    def compile_inbound(self, true_target: str, false_target: str) -> None:
-        """Compile an inbound filter ('inbound')."""
-        pass
-
-    @abstractmethod
-    def compile_outbound(self, true_target: str, false_target: str) -> None:
-        """Compile an outbound filter ('outbound')."""
-        pass
-
-    @abstractmethod
     def compile_proto(self, node: "KeywordFilterNode", true_target: str, false_target: str) -> None:
         """Compile a protocol-number or proto keyword filter ('proto 6', etc.)."""
         pass
@@ -96,4 +91,14 @@ class BaseLinkType(ABC):
     @abstractmethod
     def compile_byte_access(self, node: "ByteAccessNode", false_target: str) -> None:
         """Compile protocol byte access (e.g. 'ip[0]', 'tcp[13]')."""
+        pass
+
+    @abstractmethod
+    def save_state(self) -> tuple:
+        """Snapshot link-layer specific offsets and flags."""
+        pass
+
+    @abstractmethod
+    def restore_state(self, state: tuple) -> None:
+        """Restore link-layer specific offsets and flags."""
         pass

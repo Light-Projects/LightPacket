@@ -34,30 +34,52 @@ import pytest
 # Path setup – make "LightBPF" importable.
 # Edit HERE if your layout is different.
 # ---------------------------------------------------------------------------
-
-from LightPacket.LightBPF.Lexer import BpfLexer, Token
-from LightPacket.LightBPF.Parser import (
-    BpfParser, ASTNode, BinaryOpNode, UnaryOpNode,
-    ProtocolNode, KeywordFilterNode, ByteAccessNode,
-    LengthNode, NumberNode, LiteralNode, FieldNode,
-)
-from LightPacket.LightBPF.CompilerSet.Compiler import BpfCompiler
-from LightPacket.LightBPF.CompilerSet.Emulator import BpfEmulator
-from LightPacket.LightBPF.CompilerSet.Instruction import Instruction
-from LightPacket.LightBPF.CompilerSet.Disassembler import disassemble, c_str_style
-from LightPacket.LightBPF.CompilerSet.Fprog import to_fprog, bpf_insn, sock_fprog
-from LightPacket.LightBPF.CompilerSet.Opcode import (
-    BPF_LD, BPF_LDX, BPF_ST, BPF_STX, BPF_ALU, BPF_JMP, BPF_RET, BPF_MISC,
-    BPF_W, BPF_H, BPF_B,
-    BPF_IMM, BPF_ABS, BPF_IND, BPF_MEM, BPF_LEN, BPF_MSH,
-    BPF_ADD, BPF_SUB, BPF_MUL, BPF_DIV, BPF_OR, BPF_AND, BPF_LSH, BPF_RSH,
-    BPF_NEG, BPF_MOD, BPF_XOR,
-    BPF_JA, BPF_JEQ, BPF_JGT, BPF_JGE, BPF_JSET,
-    BPF_K, BPF_X, BPF_TAX, BPF_TXA, BPF_A, BPF_MAX_BUF_LEN,
-    insn_class, insn_size, insn_mode, insn_op, insn_src,
-)
-from LightPacket.LightBPF.CompilerSet import Peephole
-
+try:
+    from LightPacket.LightBPF.Lexer import BpfLexer, Token
+    from LightPacket.LightBPF.Parser import (
+        BpfParser, BinaryOpNode, UnaryOpNode,
+        ProtocolNode, KeywordFilterNode, ByteAccessNode,
+        LengthNode
+    )
+    from LightPacket.LightBPF.CompilerSet.Compiler import BpfCompiler
+    from LightPacket.LightBPF.CompilerSet.Emulator import BpfEmulator
+    from LightPacket.LightBPF.CompilerSet.Instruction import Instruction
+    from LightPacket.LightBPF.CompilerSet.Disassembler import disassemble, c_str_style
+    from LightPacket.LightBPF.CompilerSet.Fprog import to_fprog, sock_fprog
+    from LightPacket.LightBPF.CompilerSet.Opcode import (
+        BPF_LD, BPF_LDX, BPF_ST, BPF_STX, BPF_ALU, BPF_JMP, BPF_RET, BPF_MISC,
+        BPF_W, BPF_H,
+        BPF_IMM, BPF_ABS,
+        BPF_ADD, BPF_SUB, BPF_MUL, BPF_DIV, BPF_OR, BPF_AND, BPF_LSH, BPF_RSH,
+        BPF_NEG, BPF_MOD, BPF_XOR,
+        BPF_JA, BPF_JEQ, BPF_JGT, BPF_JGE, BPF_JSET,
+        BPF_K, BPF_X, BPF_A, BPF_MAX_BUF_LEN,
+        insn_class, insn_size, insn_mode, insn_op, insn_src
+    )
+    from LightPacket.LightBPF.CompilerSet import Peephole
+except:
+    from LightBPF.Lexer import BpfLexer, Token
+    from LightBPF.Parser import (
+        BpfParser, BinaryOpNode, UnaryOpNode,
+        ProtocolNode, KeywordFilterNode, ByteAccessNode,
+        LengthNode
+    )
+    from LightBPF.CompilerSet.Compiler import BpfCompiler
+    from LightBPF.CompilerSet.Emulator import BpfEmulator
+    from LightBPF.CompilerSet.Instruction import Instruction
+    from LightBPF.CompilerSet.Disassembler import disassemble, c_str_style
+    from LightBPF.CompilerSet.Fprog import to_fprog, sock_fprog
+    from LightBPF.CompilerSet.Opcode import (
+        BPF_LD, BPF_LDX, BPF_ST, BPF_STX, BPF_ALU, BPF_JMP, BPF_RET, BPF_MISC,
+        BPF_W, BPF_H,
+        BPF_IMM, BPF_ABS,
+        BPF_ADD, BPF_SUB, BPF_MUL, BPF_DIV, BPF_OR, BPF_AND, BPF_LSH, BPF_RSH,
+        BPF_NEG, BPF_MOD, BPF_XOR,
+        BPF_JA, BPF_JEQ, BPF_JGT, BPF_JGE, BPF_JSET,
+        BPF_K, BPF_X, BPF_A, BPF_MAX_BUF_LEN,
+        insn_class, insn_size, insn_mode, insn_op, insn_src
+    )
+    from LightBPF.CompilerSet import Peephole
 
 # ===========================================================================
 # Packet helpers
@@ -342,6 +364,18 @@ class TestParser:
         node = self._parse("vlan")
         assert isinstance(node, KeywordFilterNode)
         assert node.keyword == "vlan"
+
+    def test_pppoes_keyword(self):
+        node = self._parse("pppoes")
+        assert isinstance(node, KeywordFilterNode)
+        assert node.keyword == "pppoes"
+        assert node.value is None
+
+    def test_pppoes_with_session_id(self):
+        node = self._parse("pppoes 0x1234")
+        assert isinstance(node, KeywordFilterNode)
+        assert node.keyword == "pppoes"
+        assert node.value == 0x1234
 
     def test_broadcast(self):
         node = self._parse("broadcast")
@@ -768,6 +802,50 @@ class TestCompilerEmulatorVlanMisc:
     def test_vlan_with_id_compiles(self):
         prog = BpfCompiler.compile_str("vlan 100")
         assert len(prog) > 0
+
+    def test_pppoes_compiles(self):
+        prog = BpfCompiler.compile_str("pppoes")
+        assert len(prog) > 0
+
+    def test_pppoes_with_session_id_compiles(self):
+        prog = BpfCompiler.compile_str("pppoes 0x1234")
+        assert len(prog) > 0
+
+    def test_pppoes_packet_matching(self):
+        from LightPacket.EthernetII import Ethernet
+        from LightPacket.ppp import PPPoE, PPP2b
+        from LightPacket.ipv4 import IPv4
+        from LightPacket.ipv6 import IPv6
+        from LightPacket.tcp import TCP
+
+        pkt_v4 = bytes(Ethernet(ethertype=0x8864) / PPPoE(ssid=0x1234) / PPP2b(proto=0x0021) / IPv4(proto=6) / TCP(dport=80))
+        pkt_v6 = bytes(Ethernet(ethertype=0x8864) / PPPoE(ssid=0x1234) / PPP2b(proto=0x0057) / IPv6(next_header=6) / TCP(dport=80))
+        pkt_non_pppoe = bytes(Ethernet(ethertype=0x0800) / IPv4(proto=6) / TCP(dport=80))
+
+        # Match pppoes
+        prog = BpfCompiler.compile_str("pppoes")
+        assert BpfEmulator.execute(prog, pkt_v4) > 0
+        assert BpfEmulator.execute(prog, pkt_non_pppoe) == 0
+
+        # Match session id
+        prog_sess = BpfCompiler.compile_str("pppoes 0x1234")
+        assert BpfEmulator.execute(prog_sess, pkt_v4) > 0
+        prog_wrong_sess = BpfCompiler.compile_str("pppoes 0x5678")
+        assert BpfEmulator.execute(prog_wrong_sess, pkt_v4) == 0
+
+        # Match pppoes and ip / ip6
+        prog_ip = BpfCompiler.compile_str("pppoes and ip")
+        assert BpfEmulator.execute(prog_ip, pkt_v4) > 0
+        assert BpfEmulator.execute(prog_ip, pkt_v6) == 0
+
+        prog_ip6 = BpfCompiler.compile_str("pppoes and ip6")
+        assert BpfEmulator.execute(prog_ip6, pkt_v6) > 0
+        assert BpfEmulator.execute(prog_ip6, pkt_v4) == 0
+
+        # Match transport layer through pppoes
+        prog_tcp_port = BpfCompiler.compile_str("pppoes and tcp and port 80")
+        assert BpfEmulator.execute(prog_tcp_port, pkt_v4) > 0
+        assert BpfEmulator.execute(prog_tcp_port, pkt_non_pppoe) == 0
 
     def test_broadcast_compiles(self):
         prog = BpfCompiler.compile_str("broadcast")

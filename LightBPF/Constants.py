@@ -103,6 +103,17 @@ IPV4_DST_OFF = 30
 
 IPV4_FRAG_MASK = 0x1FFF     # Mask to extract fragment offset (non-first fragment check)
 
+PPPOES_PROTO_OFF = 20
+
+# PPPoE + PPP Header Sizes
+PPPOE_HDR_LEN = 6             # Version(4b) + Type(4b) + Code(1B) + SessionID(2B) + Length(2B)
+PPP_HDR_LEN = 2               # PPP Protocol(2B)
+PPPOES_TOTAL_OFFSET_SHIFT = 8 # 6 + 2 = 8 bytes shift before encapsulated IP
+
+# PPP Protocol IDs (inside PPPoE session)
+PPP_PROTO_IPV4 = 0x0021       # Internet Protocol v4
+PPP_PROTO_IPV6 = 0x0057       # Internet Protocol v6
+
 # Fixed IPv6 Offsets from start of Ethernet frame
 IPV6_HLEN = 40
 IPV6_VER_TC_FL_OFF = 14
